@@ -1,67 +1,97 @@
 """
-sync_sheets.py
-HLDDru 專用：從 4 個 Google Sheets（Lemmata / Senses / Examples / Etymology）
-同步資料，輸出至 data/ 資料夾（CSV + JSON 兩種格式）。
+scripts/sync_sheets.py
+
+從 Google Sheets 抓取 HLDDru（Haiang Learner's Dictionary of Rukai）的詞典資料，
+輸出成 data/*.csv，供 index.html 在瀏覽器端 fetch 使用。
+
+執行方式：由 GitHub Actions 排程呼叫（見 .github/workflows/sync-sheets.yml），
+使用 Service Account 憑證讀取 Sheets API，不需要互動式登入。
+
+新增第2/3/4份資料時，只要在下方 SHEETS 這個清單多加一筆設定即可，
+不需要更動其餘程式碼。
 """
 
-import os, json, csv
-import gspread
+import csv
+import json
+import os
+import sys
+
 from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
 
-# ── Auth ──────────────────────────────────────────────────────
-creds_json = json.loads(os.environ['GOOGLE_CREDENTIALS'])
-scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-creds = Credentials.from_service_account_info(creds_json, scopes=scopes)
-gc = gspread.authorize(creds)
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-# ── 試算表對照表：env 變數名 → (輸出檔名, 說明) ──────────────────
-SHEETS = {
-    'SPREADSHEET_ID_LEMMATA':   ('08-Lemmata',   '詞目表'),
-    'SPREADSHEET_ID_SENSES':    ('08-Senses',    '義項表'),
-    'SPREADSHEET_ID_EXAMPLES':  ('08-Examples',  '例句表'),
-    'SPREADSHEET_ID_ETYMOLOGY': ('08-Etymology', '詞源表'),
-}
+# ── 資料來源設定 ──────────────────────────────────────────────
+# id_env    : 存放該 Sheet ID 的 GitHub Secret 名稱
+# sheet_name: Google Sheet 內的分頁（工作表）名稱
+# output    : 輸出到 repo 內的哪個檔案
+SHEETS = [
+    {
+        'id_env': 'SPREADSHEET_ID_LEMMATA',
+        'sheet_name': '08-Lemmata',
+        'output': 'data/08-Lemmata.csv',
+    },
+    # 之後其餘3份資料的欄位結構確認後，比照這個格式加進來，例如：
+    # {
+    #     'id_env': 'SPREADSHEET_ID_2',
+    #     'sheet_name': '工作表1',
+    #     'output': 'data/xx-XXX.csv',
+    # },
+]
 
-os.makedirs('data', exist_ok=True)
 
-for env_key, (out_name, desc) in SHEETS.items():
-    sid = os.environ.get(env_key, '').strip()
-    if not sid:
-        print(f'⚠ {env_key} 未設定，略過（{desc}）')
-        continue
+def get_credentials():
+    raw = os.environ.get('GCP_SERVICE_ACCOUNT_KEY')
+    if not raw:
+        print('錯誤：找不到環境變數 GCP_SERVICE_ACCOUNT_KEY', file=sys.stderr)
+        sys.exit(1)
+    info = json.loads(raw)
+    return Credentials.from_service_account_info(info, scopes=SCOPES)
 
-    sh = gc.open_by_key(sid)
-    ws = sh.sheet1
-    rows = ws.get_all_values()
 
-    if len(rows) < 2:
-        print(f'⚠ {desc}：無資料')
-        continue
+def fetch_sheet_values(service, spreadsheet_id, sheet_name):
+    result = service.spreadsheets().values().get(
+        spreadsheetId=spreadsheet_id,
+        range=sheet_name,
+        valueRenderOption='UNFORMATTED_VALUE',
+    ).execute()
+    return result.get('values', [])
 
-    headers = rows[0]
-    data_rows = [r for r in rows[1:] if any(c.strip() for c in r)]
 
-    # ── 寫入 CSV（保留與 Google Sheets 相同的欄位順序）──────────
-    csv_path = f'data/{out_name}.csv'
-    with open(csv_path, 'w', newline='', encoding='utf-8-sig') as f:
+def write_csv(values, output_path):
+    if not values:
+        print(f'  ⚠ 沒有資料，略過寫入 {output_path}')
+        return
+
+    header = values[0]
+    col_count = len(header)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(headers)
-        writer.writerows(data_rows)
-    print(f'✅ {csv_path}（{len(data_rows)} 筆）')
+        for row in values:
+            # Sheets API 會省略每列尾端的空白儲存格，補齊到跟表頭一樣的欄數，
+            # 確保空白欄（例如 08-Lemmata 裡標示 ne 的那一欄）不會被吃掉。
+            padded = row + [''] * (col_count - len(row))
+            writer.writerow([str(c) for c in padded[:col_count]])
 
-    # ── 寫入 JSON（只保留有值的欄位，縮小檔案體積；供日後功能使用）──
-    records = []
-    for row in data_rows:
-        r = {}
-        for i, h in enumerate(headers):
-            v = row[i].strip() if i < len(row) else ''
-            if v:
-                r[h] = v
-        records.append(r)
+    print(f'  ✓ 寫入 {output_path}（{len(values) - 1} 筆資料列）')
 
-    json_path = f'data/{out_name}.json'
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(records, f, ensure_ascii=False, separators=(',', ':'))
-    print(f'✅ {json_path}（{len(records)} 筆）')
 
-print('\n🎉 HLDDru 資料同步完成')
+def main():
+    creds = get_credentials()
+    service = build('sheets', 'v4', credentials=creds)
+
+    for sheet_cfg in SHEETS:
+        spreadsheet_id = os.environ.get(sheet_cfg['id_env'])
+        if not spreadsheet_id:
+            print(f"  ⚠ 找不到環境變數 {sheet_cfg['id_env']}，略過此份資料")
+            continue
+
+        print(f"同步 {sheet_cfg['output']} ← Sheet({sheet_cfg['id_env']})...")
+        values = fetch_sheet_values(service, spreadsheet_id, sheet_cfg['sheet_name'])
+        write_csv(values, sheet_cfg['output'])
+
+
+if __name__ == '__main__':
+    main()

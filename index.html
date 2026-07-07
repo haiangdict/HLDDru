@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLDDru｜海盎魯凱語學習辭典</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'jf-openhuninn';
+  src: url('https://cdn.jsdelivr.net/gh/justfont/open-huninn-font@v2.1/font/jf-openhuninn-2.1.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/gh/justfont/open-huninn-font@v2.1/font/jf-openhuninn-2.1.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0e0e0e;
+  --surface: #1a1a1a;
+  --surface2: #242424;
+  --border: #2e2e2e;
+  --accent: #d4a843;
+  --accent2: #8bc4a8;
+  --text: #e8e4dc;
+  --muted: #777;
+  --playing: #8bc4a8;
+}
+
+/* ── LIGHT MODE ── */
+body.light {
+  --bg: #f5f3ef;
+  --surface: #ffffff;
+  --surface2: #ede9e3;
+  --border: #d4cfc8;
+  --text: #1a1814;
+  --muted: #666;
+}
+body.light header { background: rgba(245,243,239,0.96); }
+body.light .content-info { background: var(--bg); }
+body.light .letter-hdr { background: var(--bg); }
+
+/* ── FONT SIZE SCALE ── */
+body.fs-sm  { font-size: 0.88rem; }
+body.fs-md  { font-size: 1rem;    }
+body.fs-lg  { font-size: 1.13rem; }
+body.fs-xl  { font-size: 1.28rem; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(14,14,14,0.96);
+  backdrop-filter: blur(12px);
+  z-index: 200;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.logo { display: flex; flex-direction: column; gap: 2px; }
+.logo-main { font-size: 1.2rem; font-weight: 900; letter-spacing: 0.05em; color: var(--accent); font-family: 'Noto Serif TC', serif; }
+.logo-sub { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.ui-ctrl-btn {
+  font-family: 'Space Mono', monospace; font-size: 0.68rem;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); padding: 5px 10px; border-radius: 20px;
+  cursor: pointer; transition: all 0.15s; display:flex; align-items:center; gap:5px;
+}
+.ui-ctrl-btn:hover { border-color: var(--accent2); color: var(--text); }
+
+.fs-ctrl {
+  display:flex; align-items:center; gap:3px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px 6px;
+}
+.fs-btn {
+  font-family: 'Space Mono', monospace; font-size: 0.72rem;
+  background: transparent; border: none;
+  color: var(--muted); padding: 2px 6px; border-radius: 14px;
+  cursor: pointer; transition: all 0.13s; line-height:1;
+}
+.fs-btn:hover { color: var(--text); background: var(--surface); }
+.fs-btn.active { background: var(--accent2); color: #0e0e0e; font-weight:700; }
+.fs-divider { width:1px; height:14px; background:var(--border); flex-shrink:0; }
+
+.header-ctrls { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+
+/* ── LAYOUT ── */
+.main { display: flex; height: calc(100vh - 66px); position: relative; }
+
+/* ── SIDEBAR (A-Z) ── */
+.sidebar {
+  width: 68px; min-width: 68px; border-right: 1px solid var(--border);
+  overflow-y: auto; background: var(--bg); flex-shrink: 0;
+  display: flex; flex-direction: column; padding: 6px 0;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.az-btn {
+  display:block; width:100%; text-align:center; padding:9px 0;
+  font-family:'Space Mono',monospace; font-size:0.88rem; font-weight:700;
+  color:var(--muted); cursor:pointer; background:none; border:none;
+  border-left:3px solid transparent; transition: all 0.15s;
+  text-transform: uppercase;
+}
+.az-btn:hover { color:var(--accent); background:var(--surface); }
+.az-btn.active { color:var(--accent2); border-left-color:var(--accent2); background:var(--surface); }
+
+/* ── CONTENT ── */
+.content { flex: 1; overflow-y: auto; }
+.content::-webkit-scrollbar { width: 8px; }
+.content::-webkit-scrollbar-track { background: var(--surface2); border-radius: 4px; }
+.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.content::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+.content-info {
+  font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted);
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.content-info span { color: var(--accent); }
+
+.letter-hdr {
+  position: sticky; top: 0; z-index: 6;
+  background: var(--bg);
+  padding: 8px 20px;
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 900; font-size: 1.5rem; letter-spacing: 0.04em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+}
+
+.word-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.word-row:hover { background: var(--surface); }
+
+.word-main {
+  font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
+  font-size: 1.12em;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+.ne-tag { opacity: 0.4; font-weight: 400; }
+
+/* ── PLAY BUTTON (same design as index.html) ── */
+.play-btn {
+  width:32px; height:32px; border-radius:50%;
+  border:1.5px solid var(--border); background:transparent; color:var(--muted);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:0.75rem; transition:all 0.18s; flex-shrink:0;
+}
+.play-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(212,168,67,0.08); }
+.play-btn.active { border-color:var(--playing); color:var(--playing); background:rgba(139,196,168,0.1); }
+.play-btn:disabled { opacity:0.22; cursor:not-allowed; }
+
+/* ── EMPTY / LOADING ── */
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:80px 20px; color:var(--muted); font-family:'Space Mono',monospace; font-size:0.8rem; }
+.empty-icon { font-size:2rem; opacity:0.5; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 18px; border-radius: 20px; font-family:'Space Mono',monospace; font-size:0.7rem;
+  opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 500;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  header { padding: 12px 16px; }
+  .main { flex-direction: column; height: auto; }
+  .sidebar {
+    width: 100%; min-width: 0; flex-direction: row;
+    overflow-x: auto; overflow-y: hidden; padding: 4px 8px;
+    border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .az-btn { flex: 0 0 auto; padding: 8px 11px; border-left: none; border-bottom: 3px solid transparent; }
+  .az-btn.active { border-left-color: transparent; border-bottom-color: var(--accent2); }
+  .content { height: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-main">HLDDru</div>
+    <div class="logo-sub">海盎魯凱語學習辭典 · Haiang Learner's Dictionary of Rukai</div>
+  </div>
+  <div class="header-ctrls">
+    <div class="fs-ctrl" title="字體大小">
+      <button class="fs-btn" id="fs-sm" onclick="setFontSize('sm')" title="小">A</button>
+      <div class="fs-divider"></div>
+      <button class="fs-btn active" id="fs-md" onclick="setFontSize('md')" title="中" style="font-size:0.85rem;">A</button>
+      <div class="fs-divider"></div>
+      <button class="fs-btn" id="fs-lg" onclick="setFontSize('lg')" title="大" style="font-size:1rem;">A</button>
+      <div class="fs-divider"></div>
+      <button class="fs-btn" id="fs-xl" onclick="setFontSize('xl')" title="特大" style="font-size:1.15rem;">A</button>
+    </div>
+    <button class="ui-ctrl-btn" id="themeBtn" onclick="toggleTheme()" title="切換深色/淺色模式">🌙</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="content" id="content">
+    <div class="empty"><div class="empty-icon">⟳</div><div>載入資料中…</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const AUDIO_BASE = 'https://pub-44bec38ae2824f519a8519301efe3bd7.r2.dev/';
+const CSV_URL = './data/08-Lemmata.csv';
+const AUDIO_CATEGORY = 'V'; // 詞目 lemmata entries live under {dialect}/V/
+
+let entries = [];
+
+// ── CSV parsing (handles quoted fields, keeps blank-header column) ──
+function parseCSV(text) {
+  const lines = text.replace(/^\ufeff/, '').trim().split(/\r?\n/);
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = lines.slice(1).map(line => {
+    const cols = []; let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    cols.push(cur);
+    return cols;
+  });
+  return { headers, rows };
+}
+
+function firstLetter(word) {
+  let w = (word || '').trim();
+  if (w.startsWith('\u2019')) w = w.slice(1); // leading glottal-stop mark not used for indexing
+  return w ? w[0].toLowerCase() : '#';
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(CSV_URL, { cache: 'no-cache' });
+    const text = await res.text();
+    const { headers, rows } = parseCSV(text);
+
+    const idxWord = headers.indexOf('詞語');
+    const idxDial = headers.indexOf('語別');
+    const idxAudio = headers.indexOf('音檔');
+    const idxNe = idxWord + 1; // unnamed column immediately right of headword flags "ne"
+
+    entries = rows.map(cols => {
+      const word = (cols[idxWord] || '').trim();
+      return {
+        word,
+        letter: firstLetter(word),
+        ne: (cols[idxNe] || '').trim() === 'ne',
+        dial: (cols[idxDial] || '').trim(),
+        audioFile: (cols[idxAudio] || '').trim()
+      };
+    }).filter(e => e.word);
+
+    buildSidebar();
+    renderContent();
+  } catch (err) {
+    document.getElementById('content').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠</div><div>資料載入失敗，請確認 ' + CSV_URL + ' 是否存在</div></div>';
+  }
+}
+
+function buildSidebar() {
+  const letters = [...new Set(entries.map(e => e.letter))].sort();
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = letters.map(l =>
+    `<button class="az-btn" id="az-${l}" onclick="jumpToLetter('${l}')">${l}</button>`
+  ).join('');
+}
+
+function audioUrl(e) {
+  if (!e.audioFile || !e.dial) return '';
+  return AUDIO_BASE + e.dial + '/' + AUDIO_CATEGORY + '/' + e.audioFile;
+}
+
+function renderContent() {
+  const content = document.getElementById('content');
+  let html = `<div class="content-info"><span>${entries.length.toLocaleString()}</span> 筆詞條</div>`;
+  let lastLetter = null;
+  entries.forEach((e, i) => {
+    if (e.letter !== lastLetter) {
+      html += `<div class="letter-hdr" id="letter-${e.letter}" data-letter="${e.letter}">${e.letter}</div>`;
+      lastLetter = e.letter;
+    }
+    const url = audioUrl(e);
+    const hasAudio = !!url;
+    html += `<div class="word-row">
+      <button class="play-btn" id="pbtn-${i}" ${hasAudio ? '' : 'disabled'}
+        title="${hasAudio ? '播放音檔' : '無音檔'}"
+        onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
+      <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
+    </div>`;
+  });
+  content.innerHTML = html;
+  observeLetters();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function jumpToLetter(letter) {
+  const el = document.getElementById('letter-' + letter);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Highlight current letter in sidebar while scrolling ──
+let _observer = null;
+function observeLetters() {
+  if (_observer) _observer.disconnect();
+  const hdrs = document.querySelectorAll('.letter-hdr');
+  _observer = new IntersectionObserver((entriesObs) => {
+    entriesObs.forEach(en => {
+      if (en.isIntersecting) {
+        document.querySelectorAll('.az-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('az-' + en.target.dataset.letter);
+        if (btn) btn.classList.add('active');
+      }
+    });
+  }, { root: document.getElementById('content'), threshold: 0, rootMargin: '0px 0px -85% 0px' });
+  hdrs.forEach(h => _observer.observe(h));
+}
+
+// ── Audio playback ──
+let currentAudio = null, currentBtn = null;
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+  if (currentBtn) { currentBtn.textContent = '▶'; currentBtn.classList.remove('active'); }
+  currentAudio = null; currentBtn = null;
+}
+function togglePlay(url, btn) {
+  if (!url) return;
+  if (currentBtn === btn && currentAudio && !currentAudio.paused) { stopAudio(); return; }
+  stopAudio();
+  currentAudio = new Audio(url);
+  currentBtn = btn;
+  btn.textContent = '⏸'; btn.classList.add('active');
+  currentAudio.onended = stopAudio;
+  currentAudio.play().catch(() => {
+    showToast('⚠ 音檔無法播放，請檢查網路連線');
+    stopAudio();
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Theme & Font Size ──
+const FS_SIZES = ['sm', 'md', 'lg', 'xl'];
+function setFontSize(size, silent) {
+  if (!FS_SIZES.includes(size)) size = 'md';
+  document.body.className = document.body.className.replace(/\bfs-\w+\b/g, '').trim();
+  document.body.classList.add('fs-' + size);
+  FS_SIZES.forEach(s => {
+    const btn = document.getElementById('fs-' + s);
+    if (btn) btn.classList.toggle('active', s === size);
+  });
+  try { localStorage.setItem('hlddru_fs', size); } catch (e) {}
+}
+let _theme = 'dark';
+function _applyTheme(theme, silent) {
+  _theme = theme;
+  document.body.classList.toggle('light', theme === 'light');
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+  try { localStorage.setItem('hlddru_theme', theme); } catch (e) {}
+}
+function toggleTheme() { _applyTheme(_theme === 'dark' ? 'light' : 'dark'); }
+
+(function loadPrefs() {
+  try {
+    setFontSize(localStorage.getItem('hlddru_fs') || 'md');
+    const th = localStorage.getItem('hlddru_theme') || 'dark';
+    if (th === 'light') _applyTheme('light');
+  } catch (e) {}
+})();
+
+loadData();
+</script>
+</body>
+</html>

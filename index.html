@@ -146,17 +146,16 @@ header {
 }
 
 .letter-group {
-  column-width: 340px;
-  column-gap: 0;
-  column-rule: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+  padding: 10px 20px;
 }
 
 .lemma-entry {
-  border-bottom: 1px solid var(--border);
-  padding: 12px 20px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px 14px;
   transition: background 0.15s;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
 }
 .lemma-entry:hover { background: var(--surface); }
 
@@ -175,12 +174,22 @@ header {
 /* ── SENSES ── */
 .sense-list { margin: 6px 0 0 20px; }
 .sense-item { padding: 5px 0; }
+.sense-item + .sense-item { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; }
 .sense-head {
   display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
 }
 .sense-num { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: var(--muted); }
 .level-icons { color: var(--accent2); letter-spacing: 1px; font-size: 0.85em; font-family: 'Space Mono', monospace; }
 .sense-trans { font-size: 1em; color: var(--text); }
+
+/* ── REFERENCE FIELDS (近義詞/反義詞/相關詞/附註) ── */
+.ref-row { margin-top: 4px; font-size: 0.88em; color: var(--muted); line-height: 1.6; }
+.ref-label {
+  display: inline-block;
+  font-family: 'Space Mono', monospace; font-size: 0.66rem;
+  color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1px 8px; margin-right: 6px;
+}
 
 /* ── ETYMOLOGY BLOCK ── */
 .ety-block {
@@ -375,11 +384,32 @@ async function loadData() {
 
     buildSidebar();
     renderContent();
+    layoutLetterGrids();
   } catch (err) {
     document.getElementById('content').innerHTML =
       '<div class="empty"><div class="empty-icon">⚠</div><div>資料載入失敗，請確認 data 資料夾內的 csv 是否存在</div></div>';
   }
 }
+
+// ── Grid layout: same-row entries share equal height, column-first fill ──
+function layoutLetterGrids() {
+  document.querySelectorAll('.letter-group').forEach(group => {
+    const items = group.children.length;
+    if (!items) return;
+    const width = group.clientWidth || (group.parentElement ? group.parentElement.clientWidth : 340);
+    const columns = Math.max(1, Math.floor(width / 340));
+    const rows = Math.ceil(items / columns);
+    group.style.gridAutoFlow = 'column';
+    group.style.gridTemplateRows = `repeat(${rows}, auto)`;
+    group.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  });
+}
+
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(layoutLetterGrids, 150);
+});
 
 function buildSidebar() {
   const letters = [...new Set(entries.map(e => e.letter))].sort();
@@ -448,10 +478,32 @@ function renderSenseSection(lemmaId) {
       html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
     }
     html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
+    html += renderNumericRefLine('近義詞', s['近義詞']);
+    html += renderNumericRefLine('反義詞', s['反義詞']);
+    html += renderNumericRefLine('相關詞', s['相關詞']);
+    html += renderNoteLine(s['附註']);
     html += `</div>`;
   });
   html += '</div>';
   return html;
+}
+
+// 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
+function renderNumericRefLine(label, raw) {
+  raw = (raw || '').trim();
+  if (!raw) return '';
+  const resolved = raw.split('+').map(t => t.trim()).filter(Boolean)
+    .map(resolveEtymologyToken).filter(r => r && r.type === 'numeric');
+  if (!resolved.length) return '';
+  const inner = resolved.map(renderEtymologyFragment).join(' + ');
+  return `<div class="ref-row"><span class="ref-label">${label}</span>${inner}</div>`;
+}
+
+// 附註：純文字，不解析
+function renderNoteLine(raw) {
+  raw = (raw || '').trim();
+  if (!raw) return '';
+  return `<div class="ref-row"><span class="ref-label">附註</span>${escapeHtml(raw)}</div>`;
 }
 
 // 解析單一義項的「語源」欄位（可能是 A+B+C 多筆），回傳 {html} 或 null（查無任何有效來源）

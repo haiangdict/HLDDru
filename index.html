@@ -145,19 +145,26 @@ header {
   text-transform: uppercase;
 }
 
+.letter-group {
+  column-width: 340px;
+  column-gap: 0;
+  column-rule: 1px solid var(--border);
+}
+
 .lemma-entry {
   border-bottom: 1px solid var(--border);
   padding: 12px 20px 14px;
   transition: background 0.15s;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
 }
 .lemma-entry:hover { background: var(--surface); }
 
 .word-row {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 8px;
 }
 
 .word-main {
-  flex: 1;
   font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
   font-size: 1.12em;
   color: var(--text);
@@ -169,12 +176,11 @@ header {
 .sense-list { margin: 6px 0 0 20px; }
 .sense-item { padding: 5px 0; }
 .sense-head {
-  display: flex; align-items: center; gap: 9px;
-  font-family: 'Space Mono', monospace; font-size: 0.78rem;
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
 }
-.sense-num { color: var(--muted); }
-.level-icons { color: var(--accent2); letter-spacing: 2px; font-size: 0.9em; }
-.sense-trans { margin-top: 2px; font-size: 1em; color: var(--text); }
+.sense-num { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: var(--muted); }
+.level-icons { color: var(--accent2); letter-spacing: 1px; font-size: 0.85em; font-family: 'Space Mono', monospace; }
+.sense-trans { font-size: 1em; color: var(--text); }
 
 /* ── ETYMOLOGY BLOCK ── */
 .ety-block {
@@ -278,7 +284,7 @@ let lemmataById = {};       // id -> entry
 let sensesByLemma = {};     // id -> [sense objects]
 let etymologyByCode = {};   // code -> etymology object
 
-const LEVEL_ICONS = { 'B': '●●●●', 'I': '●●●○', 'S': '●●○○', 'U': '●○○○' };
+const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
 // ── CSV parsing (handles quoted fields, keeps blank-header column) ──
 function parseCSV(text) {
@@ -392,9 +398,11 @@ function renderContent() {
   const content = document.getElementById('content');
   let html = `<div class="content-info"><span>${entries.length.toLocaleString()}</span> 筆詞條</div>`;
   let lastLetter = null;
-  entries.forEach((e) => {
+  entries.forEach((e, idx) => {
     if (e.letter !== lastLetter) {
+      if (lastLetter !== null) html += '</div>'; // close previous letter-group
       html += `<div class="letter-hdr" id="letter-${e.letter}" data-letter="${e.letter}">${e.letter}</div>`;
+      html += `<div class="letter-group">`;
       lastLetter = e.letter;
     }
     const url = audioUrl(e);
@@ -409,6 +417,7 @@ function renderContent() {
       ${renderSenseSection(e.id)}
     </div>`;
   });
+  if (lastLetter !== null) html += '</div>'; // close final letter-group
   content.innerHTML = html;
   observeLetters();
 }
@@ -433,13 +442,12 @@ function renderSenseSection(lemmaId) {
   senses.forEach((s, idx) => {
     const num = multi ? `<span class="sense-num">${idx + 1}.</span>` : '';
     const lvl = LEVEL_ICONS[(s['等級'] || '').trim()] || '';
+    const trans = (s['翻譯'] || '').trim();
     html += `<div class="sense-item">`;
-    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}</div>`;
     if (!shared && senseEtyResolved[idx]) {
       html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
     }
-    const trans = (s['翻譯'] || '').trim();
-    if (trans) html += `<div class="sense-trans">${escapeHtml(trans)}</div>`;
+    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
     html += `</div>`;
   });
   html += '</div>';

@@ -166,7 +166,7 @@ header {
 .word-main {
   font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
   font-size: 1.12em;
-  color: var(--text);
+  color: var(--accent);
   letter-spacing: 0.01em;
 }
 .ne-tag { opacity: 0.25; font-weight: 400; }
@@ -200,12 +200,13 @@ header {
   margin-top: 8px;
 }
 .example-row { display: flex; align-items: center; gap: 8px; }
-.example-sentence { flex: 1; color: var(--text); font-size: 1em; }
-.example-trans { margin-top: 4px; color: var(--text); opacity: 0.85; font-size: 0.92em; }
+.example-sentence { flex: 1; color: var(--text); font-size: 1em; line-height: 1.7; }
+.example-trans { margin-top: 4px; color: var(--text); opacity: 0.85; font-size: 0.92em; line-height: 1.6; padding-right: 40px; }
 .example-source {
   margin-top: 4px; text-align: right;
   font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--muted);
 }
+.term-highlight { color: var(--accent); font-weight: 600; margin: 0 0.15em; }
 
 /* ── ETYMOLOGY BLOCK ── */
 .ety-block {
@@ -530,19 +531,35 @@ function exampleAudioUrl(ex) {
 function renderExampleBlock(ex) {
   const url = exampleAudioUrl(ex);
   const hasAudio = !!url;
-  const sentence = ex['語句'] || '';
-  const trans = ex['語句翻譯'] || '';
+  const sentenceHtml = highlightTerm(ex['語句'] || '', ex['詞語'] || '');
+  const transHtml = highlightTerm(ex['語句翻譯'] || '', ex['翻譯'] || '');
   const source = ex['出處'] || '';
   return `<div class="example-block">
     <div class="example-row">
-      <div class="example-sentence">${escapeHtml(sentence)}</div>
+      <div class="example-sentence">${sentenceHtml}</div>
       <button class="play-btn" ${hasAudio ? '' : 'disabled'}
         title="${hasAudio ? '播放音檔' : '無音檔'}"
         onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
     </div>
-    ${trans ? `<div class="example-trans">${escapeHtml(trans)}</div>` : ''}
+    ${transHtml ? `<div class="example-trans">${transHtml}</div>` : ''}
     ${source ? `<div class="example-source">（${escapeHtml(source)}）</div>` : ''}
   </div>`;
+}
+
+// 在文字中找出目標詞彙/翻譯，套上金色＋前後間距（用於例句/例句翻譯的呼應標示）
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlightTerm(text, term) {
+  if (!term) return escapeHtml(text);
+  const re = new RegExp(escapeRegex(term), 'g');
+  let result = '', lastIndex = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    result += escapeHtml(text.slice(lastIndex, m.index));
+    result += `<span class="term-highlight">${escapeHtml(m[0])}</span>`;
+    lastIndex = m.index + m[0].length;
+    if (m[0].length === 0) { re.lastIndex++; }
+  }
+  result += escapeHtml(text.slice(lastIndex));
+  return result;
 }
 
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤

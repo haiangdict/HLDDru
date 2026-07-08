@@ -36,10 +36,19 @@ SHEETS = [
         'sheet_name': '08-Lemmata',
         'output': 'data/08-Lemmata.csv',
     },
-    # 其餘3份資料（SENSES / EXAMPLES / ETYMOLOGY）欄位結構確認後，
-    # 比照這個格式加進來，例如：
+    {
+        'id_env': 'SPREADSHEET_ID_SENSES',
+        'sheet_name': '08-Senses',
+        'output': 'data/08-Senses.csv',
+    },
+    {
+        'id_env': 'SPREADSHEET_ID_ETYMOLOGY',
+        'sheet_name': '08-Etymology',
+        'output': 'data/08-Etymology.csv',
+    },
+    # 例句(EXAMPLES)欄位結構確認後，比照這個格式加進來，例如：
     # {
-    #     'id_env': 'SPREADSHEET_ID_SENSES',
+    #     'id_env': 'SPREADSHEET_ID_EXAMPLES',
     #     'sheet_name': '(該檔案的分頁名稱)',
     #     'output': 'data/(該檔案輸出檔名).csv',
     # },

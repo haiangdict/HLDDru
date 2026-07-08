@@ -145,21 +145,57 @@ header {
   text-transform: uppercase;
 }
 
-.word-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 12px 20px;
+.lemma-entry {
   border-bottom: 1px solid var(--border);
+  padding: 12px 20px 14px;
   transition: background 0.15s;
 }
-.word-row:hover { background: var(--surface); }
+.lemma-entry:hover { background: var(--surface); }
+
+.word-row {
+  display: flex; align-items: center; gap: 14px;
+}
 
 .word-main {
+  flex: 1;
   font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
   font-size: 1.12em;
   color: var(--text);
   letter-spacing: 0.01em;
 }
-.ne-tag { opacity: 0.4; font-weight: 400; }
+.ne-tag { opacity: 0.25; font-weight: 400; }
+
+/* ── SENSES ── */
+.sense-list { margin: 6px 0 0 20px; }
+.sense-item { padding: 5px 0; }
+.sense-head {
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'Space Mono', monospace; font-size: 0.78rem;
+}
+.sense-num { color: var(--muted); }
+.level-icons { color: var(--accent2); letter-spacing: 2px; font-size: 0.9em; }
+.sense-trans { margin-top: 2px; font-size: 1em; color: var(--text); }
+
+/* ── ETYMOLOGY BLOCK ── */
+.ety-block {
+  background: var(--surface2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 7px 12px;
+  margin: 6px 0 6px 20px;
+  font-size: 0.92em;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.sense-item .ety-block { margin: 4px 0 6px 0; }
+.ety-lang { margin-right: 0.35em; }
+.ety-word {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ety-word:hover { text-decoration: underline; }
 
 /* ── PLAY BUTTON (same design as index.html) ── */
 .play-btn {
@@ -232,10 +268,17 @@ header {
 
 <script>
 const AUDIO_BASE = 'https://pub-44bec38ae2824f519a8519301efe3bd7.r2.dev/';
-const CSV_URL = './data/08-Lemmata.csv';
+const LEMMATA_URL = './data/08-Lemmata.csv';
+const SENSES_URL = './data/08-Senses.csv';
+const ETYMOLOGY_URL = './data/08-Etymology.csv';
 const AUDIO_CATEGORY = 'V'; // 詞目 lemmata entries live under {dialect}/V/
 
-let entries = [];
+let entries = [];          // Lemmata rows
+let lemmataById = {};       // id -> entry
+let sensesByLemma = {};     // id -> [sense objects]
+let etymologyByCode = {};   // code -> etymology object
+
+const LEVEL_ICONS = { 'B': '●●●●', 'I': '●●●○', 'S': '●●○○', 'U': '●○○○' };
 
 // ── CSV parsing (handles quoted fields, keeps blank-header column) ──
 function parseCSV(text) {
@@ -255,6 +298,14 @@ function parseCSV(text) {
   return { headers, rows };
 }
 
+function rowsToObjects(headers, rows) {
+  return rows.map(cols => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (cols[i] || '').trim(); });
+    return obj;
+  });
+}
+
 function firstLetter(word) {
   let w = (word || '').trim();
   if (w.startsWith('\u2019')) w = w.slice(1); // leading glottal-stop mark not used for indexing
@@ -263,18 +314,25 @@ function firstLetter(word) {
 
 async function loadData() {
   try {
-    const res = await fetch(CSV_URL, { cache: 'no-cache' });
-    const text = await res.text();
-    const { headers, rows } = parseCSV(text);
+    const [lemmataText, sensesText, etymologyText] = await Promise.all([
+      fetch(LEMMATA_URL, { cache: 'no-cache' }).then(r => r.text()),
+      fetch(SENSES_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : ''),
+      fetch(ETYMOLOGY_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : '')
+    ]);
 
-    const idxWord = headers.indexOf('詞語');
-    const idxDial = headers.indexOf('語別');
-    const idxAudio = headers.indexOf('音檔');
+    // ── Lemmata ──
+    const lem = parseCSV(lemmataText);
+    const idxId = lem.headers.indexOf('編號');
+    const idxWord = lem.headers.indexOf('詞語');
+    const idxDial = lem.headers.indexOf('語別');
+    const idxAudio = lem.headers.indexOf('音檔');
     const idxNe = idxWord + 1; // unnamed column immediately right of headword flags "ne"
 
-    entries = rows.map(cols => {
+    entries = lem.rows.map(cols => {
       const word = (cols[idxWord] || '').trim();
+      const id = (cols[idxId] || '').trim();
       return {
+        id,
         word,
         letter: firstLetter(word),
         ne: (cols[idxNe] || '').trim() === 'ne',
@@ -283,11 +341,37 @@ async function loadData() {
       };
     }).filter(e => e.word);
 
+    lemmataById = {};
+    entries.forEach(e => { if (e.id) lemmataById[e.id] = e; });
+
+    // ── Senses ──
+    sensesByLemma = {};
+    if (sensesText) {
+      const sn = parseCSV(sensesText);
+      const senseObjs = rowsToObjects(sn.headers, sn.rows);
+      senseObjs.forEach(s => {
+        const id = s['編號'];
+        if (!id) return;
+        (sensesByLemma[id] = sensesByLemma[id] || []).push(s);
+      });
+    }
+
+    // ── Etymology ──
+    etymologyByCode = {};
+    if (etymologyText) {
+      const et = parseCSV(etymologyText);
+      const etyObjs = rowsToObjects(et.headers, et.rows);
+      etyObjs.forEach(row => {
+        const code = row['編號'];
+        if (code) etymologyByCode[code] = row;
+      });
+    }
+
     buildSidebar();
     renderContent();
   } catch (err) {
     document.getElementById('content').innerHTML =
-      '<div class="empty"><div class="empty-icon">⚠</div><div>資料載入失敗，請確認 ' + CSV_URL + ' 是否存在</div></div>';
+      '<div class="empty"><div class="empty-icon">⚠</div><div>資料載入失敗，請確認 data 資料夾內的 csv 是否存在</div></div>';
   }
 }
 
@@ -308,22 +392,127 @@ function renderContent() {
   const content = document.getElementById('content');
   let html = `<div class="content-info"><span>${entries.length.toLocaleString()}</span> 筆詞條</div>`;
   let lastLetter = null;
-  entries.forEach((e, i) => {
+  entries.forEach((e) => {
     if (e.letter !== lastLetter) {
       html += `<div class="letter-hdr" id="letter-${e.letter}" data-letter="${e.letter}">${e.letter}</div>`;
       lastLetter = e.letter;
     }
     const url = audioUrl(e);
     const hasAudio = !!url;
-    html += `<div class="word-row">
-      <button class="play-btn" id="pbtn-${i}" ${hasAudio ? '' : 'disabled'}
-        title="${hasAudio ? '播放音檔' : '無音檔'}"
-        onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
-      <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
+    html += `<div class="lemma-entry" id="lemma-${e.id}">
+      <div class="word-row">
+        <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
+        <button class="play-btn" ${hasAudio ? '' : 'disabled'}
+          title="${hasAudio ? '播放音檔' : '無音檔'}"
+          onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
+      </div>
+      ${renderSenseSection(e.id)}
     </div>`;
   });
   content.innerHTML = html;
   observeLetters();
+}
+
+// ── Senses + Etymology rendering ──
+function renderSenseSection(lemmaId) {
+  const senses = sensesByLemma[lemmaId];
+  if (!senses || !senses.length) return '';
+
+  const multi = senses.length > 1;
+  const senseEtyRaw = senses.map(s => (s['語源'] || '').trim());
+  const senseEtyResolved = senseEtyRaw.map(raw => raw ? resolveEtymologyField(raw) : null);
+
+  const shared = senseEtyRaw.every(r => r && r === senseEtyRaw[0]) && senseEtyResolved[0];
+
+  let html = '';
+  if (shared) {
+    html += `<div class="ety-block">${senseEtyResolved[0].html}</div>`;
+  }
+
+  html += '<div class="sense-list">';
+  senses.forEach((s, idx) => {
+    const num = multi ? `<span class="sense-num">${idx + 1}.</span>` : '';
+    const lvl = LEVEL_ICONS[(s['等級'] || '').trim()] || '';
+    html += `<div class="sense-item">`;
+    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}</div>`;
+    if (!shared && senseEtyResolved[idx]) {
+      html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
+    }
+    const trans = (s['翻譯'] || '').trim();
+    if (trans) html += `<div class="sense-trans">${escapeHtml(trans)}</div>`;
+    html += `</div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+// 解析單一義項的「語源」欄位（可能是 A+B+C 多筆），回傳 {html} 或 null（查無任何有效來源）
+function resolveEtymologyField(raw) {
+  const tokens = raw.split('+').map(t => t.trim()).filter(Boolean);
+  const resolved = tokens.map(resolveEtymologyToken).filter(Boolean);
+  if (!resolved.length) return null;
+
+  const isPureNumeric = resolved.every(r => r.type === 'numeric');
+  const inner = resolved.map(renderEtymologyFragment).join(' + ');
+  const prefix = isPureNumeric ? '' : '源於';
+  return { html: prefix + inner + '。' };
+}
+
+function resolveEtymologyToken(token) {
+  // 純數字：指向本詞典另一詞目（構詞分析）
+  if (/^\d{5,6}$/.test(token)) {
+    const targetLemma = lemmataById[token];
+    if (!targetLemma) return null; // 查無對應詞目，略過此筆
+    const targetSenses = sensesByLemma[token] || [];
+    const trans = targetSenses.map(s => (s['翻譯'] || '').trim()).filter(Boolean).join('；');
+    return { type: 'numeric', id: token, word: targetLemma.word, trans };
+  }
+
+  // 拉丁字母+數字：指向 08-Etymology.csv
+  if (/^[A-Za-z]{3}\d+$/.test(token)) {
+    const row = etymologyByCode[token];
+    if (!row) return null; // 查無對應資料，略過此筆
+    const lang = row['語言'];
+    const word = row['詞語'];
+    const t1 = row['轉寫1'];
+    const t2 = row['轉寫2'];
+    const trans = row['翻譯'];
+    const url = row[''] || '';
+
+    let translit = '';
+    if (lang === '日語') {
+      translit = (t1 && t2) ? (t1 + '，' + t2) : (t1 || t2);
+    } else if (lang === '閩語') {
+      translit = t1; // 目前先固定顯示轉寫1
+    }
+
+    return {
+      type: 'latin',
+      lang, word, translit, trans,
+      url: (lang === '原始南島語' && url) ? url : null
+    };
+  }
+
+  return null;
+}
+
+function renderEtymologyFragment(r) {
+  if (r.type === 'numeric') {
+    const wordHtml = `<a href="#lemma-${r.id}" class="ety-word" onclick="event.preventDefault();jumpToLemma('${r.id}')">${escapeHtml(r.word)}</a>`;
+    return wordHtml + (r.trans ? `「${escapeHtml(r.trans)}」` : '');
+  }
+  const langHtml = `<span class="ety-lang">${escapeHtml(r.lang)}</span>`;
+  const wordHtml = r.url
+    ? `<a href="${r.url}" target="_blank" rel="noopener" class="ety-word">${escapeHtml(r.word)}</a>`
+    : `<span class="ety-word">${escapeHtml(r.word)}</span>`;
+  const translitHtml = r.translit ? `（${escapeHtml(r.translit)}）` : '';
+  const transHtml = r.trans ? `「${escapeHtml(r.trans)}」` : '';
+  return langHtml + wordHtml + translitHtml + transHtml;
+}
+
+function jumpToLemma(id) {
+  const el = document.getElementById('lemma-' + id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function escapeHtml(s) {

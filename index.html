@@ -191,6 +191,22 @@ header {
   border-radius: 10px; padding: 1px 8px; margin-right: 6px;
 }
 
+/* ── EXAMPLE SENTENCES ── */
+.example-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px 10px;
+  margin-top: 8px;
+}
+.example-row { display: flex; align-items: center; gap: 8px; }
+.example-sentence { flex: 1; color: var(--text); font-size: 1em; }
+.example-trans { margin-top: 4px; color: var(--text); opacity: 0.85; font-size: 0.92em; }
+.example-source {
+  margin-top: 4px; text-align: right;
+  font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--muted);
+}
+
 /* ── ETYMOLOGY BLOCK ── */
 .ety-block {
   background: var(--surface2);
@@ -286,12 +302,15 @@ const AUDIO_BASE = 'https://pub-44bec38ae2824f519a8519301efe3bd7.r2.dev/';
 const LEMMATA_URL = './data/08-Lemmata.csv';
 const SENSES_URL = './data/08-Senses.csv';
 const ETYMOLOGY_URL = './data/08-Etymology.csv';
-const AUDIO_CATEGORY = 'V'; // 詞目 lemmata entries live under {dialect}/V/
+const EXAMPLES_URL = './data/08-Examples.csv';
+const AUDIO_CATEGORY = 'V';         // 詞目 lemmata entries live under {dialect}/V/
+const EXAMPLE_AUDIO_CATEGORY = 'V'; // 例句音檔目前暫放同一個 V 資料夾，之後可能調整
 
 let entries = [];          // Lemmata rows
 let lemmataById = {};       // id -> entry
 let sensesByLemma = {};     // id -> [sense objects]
 let etymologyByCode = {};   // code -> etymology object
+let examplesBySense = {};   // 義項 id -> [example objects]
 
 const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
@@ -329,10 +348,11 @@ function firstLetter(word) {
 
 async function loadData() {
   try {
-    const [lemmataText, sensesText, etymologyText] = await Promise.all([
+    const [lemmataText, sensesText, etymologyText, examplesText] = await Promise.all([
       fetch(LEMMATA_URL, { cache: 'no-cache' }).then(r => r.text()),
       fetch(SENSES_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : ''),
-      fetch(ETYMOLOGY_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : '')
+      fetch(ETYMOLOGY_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : ''),
+      fetch(EXAMPLES_URL, { cache: 'no-cache' }).then(r => r.ok ? r.text() : '')
     ]);
 
     // ── Lemmata ──
@@ -382,6 +402,18 @@ async function loadData() {
       });
     }
 
+    // ── Examples ──
+    examplesBySense = {};
+    if (examplesText) {
+      const ex = parseCSV(examplesText);
+      const exObjs = rowsToObjects(ex.headers, ex.rows);
+      exObjs.forEach(row => {
+        const senseId = row['義項'];
+        if (!senseId) return;
+        (examplesBySense[senseId] = examplesBySense[senseId] || []).push(row);
+      });
+    }
+
     buildSidebar();
     renderContent();
     layoutLetterGrids();
@@ -391,16 +423,14 @@ async function loadData() {
   }
 }
 
-// ── Grid layout: same-row entries share equal height, column-first fill ──
+// ── Grid layout: same-row entries share equal height, row-first fill (left→right) ──
 function layoutLetterGrids() {
   document.querySelectorAll('.letter-group').forEach(group => {
     const items = group.children.length;
     if (!items) return;
     const width = group.clientWidth || (group.parentElement ? group.parentElement.clientWidth : 340);
     const columns = Math.max(1, Math.floor(width / 340));
-    const rows = Math.ceil(items / columns);
-    group.style.gridAutoFlow = 'column';
-    group.style.gridTemplateRows = `repeat(${rows}, auto)`;
+    group.style.gridAutoFlow = 'row';
     group.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
   });
 }
@@ -482,10 +512,37 @@ function renderSenseSection(lemmaId) {
     html += renderNumericRefLine('反義詞', s['反義詞']);
     html += renderNumericRefLine('相關詞', s['相關詞']);
     html += renderNoteLine(s['附註']);
+    const exList = examplesBySense[s['義項']];
+    if (exList && exList.length) {
+      html += exList.map(renderExampleBlock).join('');
+    }
     html += `</div>`;
   });
   html += '</div>';
   return html;
+}
+
+function exampleAudioUrl(ex) {
+  if (!ex['音檔'] || !ex['語別']) return '';
+  return AUDIO_BASE + ex['語別'] + '/' + EXAMPLE_AUDIO_CATEGORY + '/' + ex['音檔'];
+}
+
+function renderExampleBlock(ex) {
+  const url = exampleAudioUrl(ex);
+  const hasAudio = !!url;
+  const sentence = ex['語句'] || '';
+  const trans = ex['語句翻譯'] || '';
+  const source = ex['出處'] || '';
+  return `<div class="example-block">
+    <div class="example-row">
+      <div class="example-sentence">${escapeHtml(sentence)}</div>
+      <button class="play-btn" ${hasAudio ? '' : 'disabled'}
+        title="${hasAudio ? '播放音檔' : '無音檔'}"
+        onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
+    </div>
+    ${trans ? `<div class="example-trans">${escapeHtml(trans)}</div>` : ''}
+    ${source ? `<div class="example-source">（${escapeHtml(source)}）</div>` : ''}
+  </div>`;
 }
 
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤

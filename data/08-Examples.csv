@@ -9,19 +9,19 @@
 80013,27,’acoga,3270622,意思,8001301,"kai ’acoga ki vaga, lo avaiya lo kilalrata sa takolraliyase lo avavaga lo azana tara wa odale.",1270483e.mp3,這句話的意思是：如果白天時聽見蛙鳴，那麼隔天一定會下雨。,十二階 · 第9冊 · 第2課
 80014,27,’acolro,3270161,膝蓋,8001401,kai ’acolroli madola twaeraerai.,1270339.mp3,我的膝蓋受傷流血。,十二階 · 第6冊 · 第10課
 80016,27,’adali,3270664,趕上,8001601,kwadra maka libang mobere kiya’adali si kolalakotho si ’acay,5270241e.mp3,而要從窗戶逃跑的那一位，被那米漿追趕上並被燙傷而死亡,文化 · 26
-80017,27,’adalro,3270477,一下,8001701,lrwasanenga ’adalowako si kelra.,270086.mp3,稍等一下，馬上來。,會話 · 7
+80017,27,’adalro,3270477,一下,8001701,lwasanenga ’adalrowako si kela.,270086.mp3,稍等一下，馬上來。,會話 · 7
 80023,27,aga,3270576,飯,8002301,"katai kabocoko ki akanekanea, ai kanea ko sa aga.",270035.mp3,水果吃不飽，我想要吃飯。,會話 · 3
 80026,27,’agay,3270253,稻米,8002601,sa ikainga Taromak ’Olavinga tocekele la ’odrolri drolri sa’agay si beceng,1270639e.mp3,族人落腳於Taromak後，種植稻米與小米維生,十二階 · 第12冊 · 第3課
 80027,27,agi,3270101,,8002701,agi ka ababay,3270103.mp3,妹妹,
 80027,27,agi,3270101,,8002702,agi ka sawalay,3270102.mp3,弟弟,
 80027,27,agi,3270101,弟（妹）,8002703,tadrosa ka takali tangea ka agili.,1270066.mp3,我有兩個兄（姊）和一個弟（妹）。,十二階 · 第2冊 · 第3課
-80030,27,agoco,3270726,拔,8003001,koadra makeceng si marearedarenga mokathabara amwa mala wagoco dra langederesai si kainganai kelra Molaonga dra kadrakerala,1270641e.mp3,拔了銳葉石松後，其中最會跑、最有耐力的男子趕緊衝到Molaonga（大南溪支流）,十二階 · 第12冊 · 第3課
+80030,27,wagoco,3270726,拔,8003001,koadra makeceng si marearedarenga mokathabara amwa mala wagoco dra langederesai si kainganai kelra Molaonga dra kadrakerala,1270641e.mp3,拔了銳葉石松後，其中最會跑、最有耐力的男子趕緊衝到Molaonga（大南溪支流）,十二階 · 第12冊 · 第3課
 80032,27,ahwahwa,3270995,準,8003201,’ahwahwa kai toki so?,270061.mp3,你的錶走得準嗎？,會話 · 5
 80038,27,airo’a,3270579,菜,8003801,yakai ka kiya tomaelra ka airo’a ta ’alravalrava?,270157.mp3,有什麼特別的菜可以推薦嗎？,會話 · 13
 80039,27,’aiso,3270310,錢,8003901,balrithi sa ’aiso,1270350.mp3,換錢,十二階 · 第7冊 · 第2課
 80039,27,’aiso,3270310,錢,8003902,’asekete sa ’aiso,1270505e.mp3,存錢,十二階 · 第9冊 · 第5課
 80039,27,’aiso,3270310,錢,8003903,"’ahwa kaivai, thaino ka ’aiso?",270087.mp3,我覺得這頂很適合，請問多少錢呢？,會話 · 7
-80042,27,akame,3270863,燻烤,8004201,lo mwadayli tokolo si lo ’ana ka bolrabolray lrai wakame,1270553e.mp3,如果到很遠的地方放陷阱，就會在山上燻烤所獵到的山肉,十二階 · 第10冊 · 第4課
+80042,27,wakame,3270863,燻烤,8004201,lo mwadayli tokolo si lo ’ana ka bolrabolray lrai wakame,1270553e.mp3,如果到很遠的地方放陷阱，就會在山上燻烤所獵到的山肉,十二階 · 第10冊 · 第4課
 80044,27,akanekanea ka madro,3270275,水果,8004401,sosoa manemanema ka akanekanea ka madro Taivang?,1270303.mp3,說說看，台灣有哪些水果？,十二階 · 第6冊 · 第4課
 80045,27,akase,3271064,立刻,8004501,"sana wakilalra idra akwasai ka kawkaw, kai swa’alrakwa ka langothabara akase thibolay si davace.",1270618.mp3,當聽到高昂宏亮的呼叫時，青年會所的男青年便立刻跑出來。,十二階 · 第11冊 · 第9課
 80046,27,akece,3270210,山羌,8004601,"si tako tokotokolo, lro ’ana sa kisisi, akece, onwang, kwadra langici si kababai wa lrangalrangai",5270101.mp3,在山上也一邊狩獵，如果獵到山羊、山羌、水鹿就販賣牠們的獸皮,文化 · 10
@@ -30,8 +30,26 @@
 80053,27,alibaebang,3270213,蝴蝶,8005301,mathariri kai alibaebang.,1270394.mp3,蝴蝶真美麗。,十二階 · 第7冊 · 第9課
 80054,27,’along,3270343,鍋,8005401,"si lo aga ka ’awaroro sa ’iya’iya ka beraberathi lo aga, ka siyaete ki ’along",5270239e.mp3,當他們要煮吃時，只要一點點的小米，就會煮成滿滿的一鍋,文化 · 26
 80055,27,’alraingi,3271060,隨便,8005501,si lo tolalake ’alraingi sonanagane sana odri’i miya,5270272e.mp3,所以如果再生孩子時（下一胎），就會隨便取名字，只要孩子能活著就好,文化 · 30
-80060,27,’alridring,3270570,腳踏車,8006001,twathadalrana ko ango’alrilriding mwa twakesi.,1270238.mp3,我每天騎腳踏車上學。,十二階 · 第5冊 · 第4課
+80060,27,’alrilridring,3270570,腳踏車,8006001,twathadalrana ko ango’alrilriding mwa twakesi.,1270238.mp3,我每天騎腳踏車上學。,十二階 · 第5冊 · 第4課
 80062,27,alrisa’esa’e,3270398,大石頭,8006201,"ikai lregelrege makalra ka alrisa’esa’e, si kalalekete trekabe twalibi",5270181e.mp3,有很多的大石頭可以製作石板，大石頭剖開後就可以做成一片一片的石板，,文化 · 20
 80065,27,alrono,3270315,椅子,8006501,kawai alrono matelrege?,1270038.mp3,那張椅子（很）重嗎？,十二階 · 第1冊 · 第8課
 80069,27,amoli,3270910,少,8006901,wasi’a lo ikai ka amoli.,1270385.mp3,數一數，有沒有少。,十二階 · 第7冊 · 第7課
 80071,27,anea,3270070,誰,8007101,yaini ki anea ka talro’ono?,2270437.mp3,這是誰的帽子？,句型 · 02訊息問句 · 11b問擁有者(物品)
+80073,27,angato,3270254,樹,8007301,madalamako twakainene ki adringi ki angato kilalalra ki mawlay ki tomoli.,1270422.mp3,我喜歡坐在樹下聽阿公講故事。,十二階 · 第8冊 · 第3課
+80075,27,angeale,3270703,扛,8007501,lro kaledra kainganaita makito wangeale idra angato kela mo’alrakowa.,1270548e.mp3,天亮的時候要扛木材回到會所。,十二階 · 第10冊 · 第3課
+80076,27,angidrakale,3270847,起床,8007601,lo amiyalrealre ’iyaka toki lo angidrakale so?,1270145.mp3,你早上幾點起床？,十二階 · 第3冊 · 第7課
+80082,27,ani’a’a’alay,3270640,飛,8008201,lraikai ki bengelrangelraiy ani’a’a’alay.,1270397.mp3,(蝴蝶)在花叢裡飛來飛去。,十二階 · 第7冊 · 第9課
+80083,27,anilralralralang,3270997,慢慢,8008301,"ai katoma lo a’otobay, lo a’alrilriding anilralralralang mwa, tako sasesesever.",270175.mp3,也可以，或者騎機車或腳踏車，慢慢騎過去，順便兜風。,會話 · 14
+80085,27,a’oy,3270418,火,8008501,ko nadroma ko ta ka omase kadro thingale sa a’oy kanekane sa ngeta.,4270177.mp3,在很久以前，人類還不知道有火，所以吃的都是生的食物,閱讀 · 18
+80087,27,arakai,3271016,用,8008701,thingale so ka abai arakai sa manema dware’e?,1270292.mp3,你知道麻糬是用什麼做的嗎？,十二階 · 第6冊 · 第2課
+80088,27,’araramaw,3270045,半,8008801,"kai tokili maredare sa mangeale, kai ’atengatenga ka mangeale si eea ka toki si ’araramaw.",270062.mp3,我的錶快了10分鐘，正確時間是11點半。,會話 · 5
+80092,27,’asabo,3270419,冰,8009201,asi loyata lo kaladraidraza malaleketeta mwa lwawlangoy malaleketeta kwane sa ’asabo. si koso?,270230.mp3,因為夏季是游泳、吃冰的好季節。那你呢？,會話 · 19
+80095,27,wasi’i,3271042,算,8009501,kai kaikaingo singi lrolay ki ta’wao neini kivaiyana odrava lro ’otalivayvai ki galawgaw kadro maka wasi’inga,4270260.mp3,至於kaingo 嚼檳榔的時間，連他自己扳開所有的手指頭都算不清楚了,閱讀 · 27
+80097,27,asiloiya,3271062,因為,8009701,"asiloiyata twalazako Balangaw talela kela Taypake, la manikai sila’eli ikai Taypake.",270321.mp3,因為我從台東搬到台北，所以要在台北找工作。,會話 · 26
+80098,27,asolro,3270325,杵,8009801,"to long to tataboha to asolro, ko nadroma yakai kwadra siyadadare’e",5270261e.mp3,如臼、木頭做的盤子、杵從以前就都會自己製作,文化 · 29
+80099,27,’asoro,3271026,留,8009901,yakai kwani mwa asivetai maladaro ’acay yakai kwani ’asoro tasivetataiya kadrowanga kelra.,1270571e.mp3,有的當兵後就戰死了，也有的留在營區（戰區）沒有再回來。,十二階 · 第10冊 · 第9課
+80103,27,’atenga,3271058,真,8010301,"ka yakai ka makalra ka ata cecela ka ’atenganeso, maelanenga.",270296.mp3,原來有那麼多的資源，真是謝謝你。,會話 · 24
+80106,27,’athingale,3270827,教,8010601,lro iganena ai ’athingale so ki vaga ki drekai?,2271337.mp3,你將來要教族語嗎？,句型 · 02口試 · 01簡短對話
+80110,27,’atwanaw,3271037,開始,8011001,’atwanaw ko kavalringiving idra tato airo’ana ki tinali.,270208.mp3,我開始想念媽媽做的菜了。,會話 · 17
+80114,27,awlro,3270136,頭,8011401,"tara kiyangeang ki awlroini, a’i otaota kiyangang ki barang.",270182.mp3,她常常頭疼，還會嘔吐、肚子疼。,會話 · 15
+80116,27,azazame,3270192,鳥,8011601,yakai karariyariyaw kai azazame.,1270124.mp3,鳥正在叫。,十二階 · 第3冊 · 第3課

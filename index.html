@@ -304,8 +304,6 @@ const LEMMATA_URL = './data/08-Lemmata.csv';
 const SENSES_URL = './data/08-Senses.csv';
 const ETYMOLOGY_URL = './data/08-Etymology.csv';
 const EXAMPLES_URL = './data/08-Examples.csv';
-const AUDIO_CATEGORY = 'V';         // 詞目 lemmata entries live under {dialect}/V/
-const EXAMPLE_AUDIO_CATEGORY = 'V'; // 例句音檔目前暫放同一個 V 資料夾，之後可能調整
 
 let entries = [];          // Lemmata rows
 let lemmataById = {};       // id -> entry
@@ -450,9 +448,32 @@ function buildSidebar() {
   ).join('');
 }
 
+// 依音檔檔名判斷實際存放的資料夾類別（見專案分流規則）
+function resolveAudioCategory(filename, dial) {
+  const base = filename.replace(/\.mp3$/i, '');
+  if (/[A-Za-z]/.test(base)) return 'D'; // .mp3前有拉丁字母
+  if (!/^\d+$/.test(base)) return null;  // 非預期格式
+
+  const dialPadded = dial.length === 1 ? ('0' + dial) : dial;
+  const prefixMap = { '1': 'T', '2': 'P', '3': 'V', '4': 'R', '5': 'W' };
+  for (const prefix in prefixMap) {
+    const expected = prefix + dialPadded;
+    if (base.length === expected.length + 4 && base.startsWith(expected)) {
+      return prefixMap[prefix];
+    }
+  }
+  // {語別代碼}+4碼 → C（方言別為個位數時不補0，前方無法補0）
+  if (base.length === dial.length + 4 && base.startsWith(dial)) {
+    return 'C';
+  }
+  return null;
+}
+
 function audioUrl(e) {
   if (!e.audioFile || !e.dial) return '';
-  return AUDIO_BASE + e.dial + '/' + AUDIO_CATEGORY + '/' + e.audioFile;
+  const cat = resolveAudioCategory(e.audioFile, e.dial);
+  if (!cat) return '';
+  return AUDIO_BASE + e.dial + '/' + cat + '/' + e.audioFile;
 }
 
 function renderContent() {
@@ -526,7 +547,9 @@ function renderSenseSection(lemmaId) {
 
 function exampleAudioUrl(ex) {
   if (!ex['音檔'] || !ex['語別']) return '';
-  return AUDIO_BASE + ex['語別'] + '/' + EXAMPLE_AUDIO_CATEGORY + '/' + ex['音檔'];
+  const cat = resolveAudioCategory(ex['音檔'], ex['語別']);
+  if (!cat) return '';
+  return AUDIO_BASE + ex['語別'] + '/' + cat + '/' + ex['音檔'];
 }
 
 function renderExampleBlock(ex) {

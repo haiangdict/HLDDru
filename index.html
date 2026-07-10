@@ -503,20 +503,21 @@ function renderSenseSection(lemmaId) {
   senses.forEach((s, idx) => {
     const num = multi ? `<span class="sense-num">${idx + 1}.</span>` : '';
     const lvl = LEVEL_ICONS[(s['等級'] || '').trim()] || '';
+    const pos = (s['詞類'] || '').trim();
     const trans = (s['翻譯'] || '').trim();
     html += `<div class="sense-item">`;
     if (!shared && senseEtyResolved[idx]) {
       html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
     }
-    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
-    html += renderNumericRefLine('近義詞', s['近義詞']);
-    html += renderNumericRefLine('反義詞', s['反義詞']);
-    html += renderNumericRefLine('相關詞', s['相關詞']);
-    html += renderNoteLine(s['附註']);
+    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${pos ? `<span class="ref-label">${escapeHtml(pos)}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
     const exList = examplesBySense[s['義項']];
     if (exList && exList.length) {
       html += exList.map(renderExampleBlock).join('');
     }
+    html += renderNumericRefLine('近義詞', s['近義詞']);
+    html += renderNumericRefLine('反義詞', s['反義詞']);
+    html += renderNumericRefLine('相關詞', s['相關詞']);
+    html += renderNoteLine(s['附註']);
     html += `</div>`;
   });
   html += '</div>';
@@ -616,8 +617,8 @@ function resolveEtymologyToken(token) {
     let translit = '';
     if (lang === '日語') {
       translit = (t1 && t2) ? (t1 + '，' + t2) : (t1 || t2);
-    } else if (lang === '閩語') {
-      translit = t1; // 目前先固定顯示轉寫1
+    } else {
+      translit = t1; // 除日語外，其餘語別(含閩語及未來新增的語別)一律顯示轉寫1
     }
 
     return {

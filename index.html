@@ -617,13 +617,24 @@ function resolveEtymologyField(raw) {
 }
 
 function resolveEtymologyToken(token) {
-  // 純數字：指向本詞典另一詞目（構詞分析）
-  if (/^\d{5,6}$/.test(token)) {
-    const targetLemma = lemmataById[token];
+  // 純數字（可選 #義項編號）：指向本詞典另一詞目，或該詞目下特定義項
+  const numMatch = token.match(/^(\d{5,6})(?:#(\d+))?$/);
+  if (numMatch) {
+    const lemmaId = numMatch[1];
+    const senseId = numMatch[2];
+    const targetLemma = lemmataById[lemmaId];
     if (!targetLemma) return null; // 查無對應詞目，略過此筆
-    const targetSenses = sensesByLemma[token] || [];
-    const trans = targetSenses.map(s => (s['翻譯'] || '').trim()).filter(Boolean).join('；');
-    return { type: 'numeric', id: token, word: targetLemma.word, trans };
+
+    let trans = '';
+    if (senseId) {
+      const targetSense = (sensesByLemma[lemmaId] || []).find(s => s['義項'] === senseId);
+      if (!targetSense) return null; // 查無對應義項，略過此筆
+      trans = (targetSense['翻譯'] || '').trim();
+    } else {
+      trans = (sensesByLemma[lemmaId] || [])
+        .map(s => (s['翻譯'] || '').trim()).filter(Boolean).join('；');
+    }
+    return { type: 'numeric', id: lemmaId, word: targetLemma.word, trans };
   }
 
   // 拉丁字母+數字：指向 08-Etymology.csv

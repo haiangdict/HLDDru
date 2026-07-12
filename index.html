@@ -102,14 +102,48 @@ header {
 /* ── LAYOUT ── */
 .main { display: flex; height: calc(100vh - 66px); position: relative; }
 
-/* ── SIDEBAR (A-Z) ── */
+/* ── SIDEBAR (方言 + A-Z) ── */
 .sidebar {
-  width: 68px; min-width: 68px; border-right: 1px solid var(--border);
+  width: 176px; min-width: 176px; border-right: 1px solid var(--border);
   overflow-y: auto; background: var(--bg); flex-shrink: 0;
-  display: flex; flex-direction: column; padding: 6px 0;
+  display: flex; flex-direction: column;
 }
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── 方言 section (checkbox list, adapted from reference design) ── */
+.sb-sec-hdr {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 13px 8px;
+  font-family: 'Space Mono', monospace; font-size: 0.62rem;
+  font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none; transition: color 0.15s;
+  position: sticky; top: 0; background: var(--bg); z-index: 2;
+}
+.sb-sec-hdr:hover { color: #e0c060; }
+.sb-sec-hdr .sb-arrow { margin-left: auto; font-size: 0.55rem; opacity: 0.6; }
+.sb-sec-body.closed { display: none; }
+.sb-all-row, .sb-l2-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 13px;
+  cursor: pointer; font-size: 0.82rem; color: var(--muted);
+  transition: all 0.13s; border-left: 3px solid transparent;
+}
+.sb-all-row:hover, .sb-l2-item:hover { background: var(--surface); color: var(--text); }
+.sb-all-row.sel { color: var(--accent2); border-left-color: var(--accent2); background: rgba(139,196,168,0.06); }
+.sb-l2-item.sel { color: var(--text); border-left-color: var(--accent2); }
+.sb-chk {
+  width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+  border: 1.5px solid var(--border); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; transition: all 0.12s; color: transparent;
+}
+.sb-chk.sel { background: var(--accent2); border-color: var(--accent2); color: #0e0e0e; }
+.sb-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── A-Z list ── */
+.az-list { padding: 6px 0; }
 .az-btn {
   display:block; width:100%; text-align:center; padding:9px 0;
   font-family:'Space Mono',monospace; font-size:0.88rem; font-weight:700;
@@ -119,6 +153,13 @@ header {
 }
 .az-btn:hover { color:var(--accent); background:var(--surface); }
 .az-btn.active { color:var(--accent2); border-left-color:var(--accent2); background:var(--surface); }
+
+/* ── per-entry dialect label ── */
+.entry-dial-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem; color: var(--accent);
+  letter-spacing: 0.06em; margin-bottom: 5px;
+}
 
 /* ── CONTENT ── */
 .content { flex: 1; overflow-y: auto; }
@@ -258,10 +299,11 @@ header {
   header { padding: 12px 16px; }
   .main { flex-direction: column; height: auto; }
   .sidebar {
-    width: 100%; min-width: 0; flex-direction: row;
-    overflow-x: auto; overflow-y: hidden; padding: 4px 8px;
+    width: 100%; min-width: 0; flex-direction: column;
+    max-height: 280px; overflow-y: auto;
     border-right: none; border-bottom: 1px solid var(--border);
   }
+  .az-list { display: flex; flex-direction: row; overflow-x: auto; padding: 4px 8px; }
   .az-btn { flex: 0 0 auto; padding: 8px 11px; border-left: none; border-bottom: 3px solid transparent; }
   .az-btn.active { border-left-color: transparent; border-bottom-color: var(--accent2); }
   .content { height: auto; }
@@ -310,6 +352,17 @@ let lemmataById = {};       // id -> entry
 let sensesByLemma = {};     // id -> [sense objects]
 let etymologyByCode = {};   // code -> etymology object
 let examplesBySense = {};   // 義項 id -> [example objects]
+
+const DIALECTS = [
+  { code: '27', name: '東' },
+  { code: '28', name: '霧台' },
+  { code: '29', name: '大武' },
+  { code: '30', name: '多納' },
+  { code: '31', name: '茂林' },
+  { code: '32', name: '萬山' }
+];
+let selectedDialects = new Set(); // 載入資料後會預設全部勾選（見 loadData）
+let dialectSectionOpen = true;    // 預設全部展開
 
 const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
@@ -378,6 +431,9 @@ async function loadData() {
     lemmataById = {};
     entries.forEach(e => { if (e.id) lemmataById[e.id] = e; });
 
+    // 預設全部勾選（涵蓋目前資料中實際出現的所有方言別）
+    selectedDialects = new Set(entries.map(e => e.dial).filter(Boolean));
+
     // ── Senses ──
     sensesByLemma = {};
     if (sensesText) {
@@ -440,12 +496,76 @@ window.addEventListener('resize', () => {
   _resizeTimer = setTimeout(layoutLetterGrids, 150);
 });
 
+function getVisibleEntries() {
+  if (selectedDialects.size === 0) return [];
+  return entries.filter(e => selectedDialects.has(e.dial));
+}
+
+function dialectName(code) {
+  const d = DIALECTS.find(d => d.code === code);
+  return d ? d.name : code;
+}
+
 function buildSidebar() {
-  const letters = [...new Set(entries.map(e => e.letter))].sort();
   const sidebar = document.getElementById('sidebar');
-  sidebar.innerHTML = letters.map(l =>
+  const availableCodes = new Set(entries.map(e => e.dial));
+  const availDialects = DIALECTS.filter(d => availableCodes.has(d.code));
+  const allSel = availDialects.length > 0 && availDialects.every(d => selectedDialects.has(d.code));
+
+  let html = `<div class="sb-sec-hdr" onclick="toggleDialectSection()">
+    方言
+    <span class="sb-arrow">${dialectSectionOpen ? '▾' : '▸'}</span>
+  </div>
+  <div class="sb-sec-body ${dialectSectionOpen ? '' : 'closed'}">
+    <div class="sb-all-row ${allSel ? 'sel' : ''}" onclick="toggleAllDialects()">
+      <div class="sb-chk ${allSel ? 'sel' : ''}">${allSel ? '✓' : ''}</div>
+      <span>全部</span>
+    </div>`;
+  availDialects.forEach(d => {
+    const sel = selectedDialects.has(d.code);
+    html += `<div class="sb-l2-item ${sel ? 'sel' : ''}" onclick="toggleDialect('${d.code}')">
+      <div class="sb-chk ${sel ? 'sel' : ''}">${sel ? '✓' : ''}</div>
+      <span>${d.name}</span>
+    </div>`;
+  });
+  html += `</div><div class="sb-divider"></div>`;
+
+  const visible = getVisibleEntries();
+  const letters = [...new Set(visible.map(e => e.letter))].sort();
+  html += `<div class="az-list">` + letters.map(l =>
     `<button class="az-btn" id="az-${l}" onclick="jumpToLetter('${l}')">${l}</button>`
-  ).join('');
+  ).join('') + `</div>`;
+
+  sidebar.innerHTML = html;
+}
+
+function toggleDialect(code) {
+  if (selectedDialects.has(code)) selectedDialects.delete(code);
+  else selectedDialects.add(code);
+  refreshAfterFilterChange();
+}
+
+function toggleAllDialects() {
+  const availableCodes = new Set(entries.map(e => e.dial));
+  const availDialects = DIALECTS.filter(d => availableCodes.has(d.code));
+  const allSel = availDialects.length > 0 && availDialects.every(d => selectedDialects.has(d.code));
+  if (allSel) {
+    selectedDialects.clear();
+  } else {
+    availDialects.forEach(d => selectedDialects.add(d.code));
+  }
+  refreshAfterFilterChange();
+}
+
+function toggleDialectSection() {
+  dialectSectionOpen = !dialectSectionOpen;
+  buildSidebar();
+}
+
+function refreshAfterFilterChange() {
+  buildSidebar();
+  renderContent();
+  layoutLetterGrids();
 }
 
 // 依音檔檔名判斷實際存放的資料夾類別（見專案分流規則）
@@ -478,9 +598,20 @@ function audioUrl(e) {
 
 function renderContent() {
   const content = document.getElementById('content');
-  let html = `<div class="content-info"><span>${entries.length.toLocaleString()}</span> 筆詞條</div>`;
+  const visible = getVisibleEntries();
+
+  if (selectedDialects.size === 0) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">◐</div><div>請從左方選擇至少一個方言</div></div>`;
+    return;
+  }
+  if (visible.length === 0) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">—</div><div>所選方言目前尚無資料</div></div>`;
+    return;
+  }
+
+  let html = `<div class="content-info"><span>${visible.length.toLocaleString()}</span> 筆詞條</div>`;
   let lastLetter = null;
-  entries.forEach((e, idx) => {
+  visible.forEach((e) => {
     if (e.letter !== lastLetter) {
       if (lastLetter !== null) html += '</div>'; // close previous letter-group
       html += `<div class="letter-hdr" id="letter-${e.letter}" data-letter="${e.letter}">${e.letter}</div>`;
@@ -490,6 +621,7 @@ function renderContent() {
     const url = audioUrl(e);
     const hasAudio = !!url;
     html += `<div class="lemma-entry" id="lemma-${e.id}">
+      <div class="entry-dial-tag">${escapeHtml(dialectName(e.dial))}</div>
       <div class="word-row">
         <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
         <button class="play-btn" ${hasAudio ? '' : 'disabled'}

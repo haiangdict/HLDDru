@@ -106,10 +106,29 @@ header {
 .sidebar {
   width: 176px; min-width: 176px; border-right: 1px solid var(--border);
   overflow-y: auto; background: var(--bg); flex-shrink: 0;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; position: relative;
+  transition: width 0.22s ease, min-width 0.22s ease;
 }
+.sidebar.collapsed { width: 32px; min-width: 32px; overflow: hidden; }
+.sidebar.collapsed .sb-sec-hdr,
+.sidebar.collapsed .sb-sec-body,
+.sidebar.collapsed .sb-divider,
+.sidebar.collapsed .az-list { display: none; }
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sb-toggle-tab {
+  position: absolute; left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 32px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 20;
+  background: var(--surface2); border-right: 1px solid var(--border);
+  font-size: 0.65rem; color: var(--muted);
+  transition: color 0.15s, background 0.15s;
+  user-select: none;
+}
+.sb-toggle-tab:hover { color: var(--accent); background: var(--surface); }
 
 /* ── 方言 section (checkbox list, adapted from reference design) ── */
 .sb-sec-hdr {
@@ -119,7 +138,6 @@ header {
   font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--accent); border-bottom: 1px solid var(--border);
   cursor: pointer; user-select: none; transition: color 0.15s;
-  position: sticky; top: 0; background: var(--bg); z-index: 2;
 }
 .sb-sec-hdr:hover { color: #e0c060; }
 .sb-sec-hdr .sb-arrow { margin-left: auto; font-size: 0.55rem; opacity: 0.6; }
@@ -142,17 +160,18 @@ header {
 .sb-chk.sel { background: var(--accent2); border-color: var(--accent2); color: #0e0e0e; }
 .sb-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-/* ── A-Z list ── */
-.az-list { padding: 6px 0; }
+/* ── A-Z list: horizontal wrap, saves vertical space ── */
+.az-list { padding: 8px 10px 10px; display: flex; flex-wrap: wrap; gap: 2px; }
+.az-list.closed { display: none; }
 .az-btn {
-  display:block; width:100%; text-align:center; padding:9px 0;
-  font-family:'Space Mono',monospace; font-size:0.88rem; font-weight:700;
+  flex: 0 0 auto; text-align:center; padding:6px 9px;
+  font-family:'Space Mono',monospace; font-size:0.82rem; font-weight:700;
   color:var(--muted); cursor:pointer; background:none; border:none;
-  border-left:3px solid transparent; transition: all 0.15s;
+  border-radius: 4px; border-left: none; transition: all 0.15s;
   text-transform: uppercase;
 }
 .az-btn:hover { color:var(--accent); background:var(--surface); }
-.az-btn.active { color:var(--accent2); border-left-color:var(--accent2); background:var(--surface); }
+.az-btn.active { color:#0e0e0e; background:var(--accent2); }
 
 /* ── per-entry dialect label ── */
 .entry-dial-tag {
@@ -281,6 +300,21 @@ header {
 .play-btn.active { border-color:var(--playing); color:var(--playing); background:rgba(139,196,168,0.1); }
 .play-btn:disabled { opacity:0.22; cursor:not-allowed; }
 
+/* ── SCROLL TO TOP ── */
+#scrollTopBtn {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--accent); color: var(--bg); border: none;
+  font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 200;
+}
+#scrollTopBtn.visible { opacity: 1; pointer-events: auto; }
+#scrollTopBtn:hover { transform: translateY(-3px); }
+
 /* ── EMPTY / LOADING ── */
 .empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:80px 20px; color:var(--muted); font-family:'Space Mono',monospace; font-size:0.8rem; }
 .empty-icon { font-size:2rem; opacity:0.5; }
@@ -303,9 +337,7 @@ header {
     max-height: 280px; overflow-y: auto;
     border-right: none; border-bottom: 1px solid var(--border);
   }
-  .az-list { display: flex; flex-direction: row; overflow-x: auto; padding: 4px 8px; }
-  .az-btn { flex: 0 0 auto; padding: 8px 11px; border-left: none; border-bottom: 3px solid transparent; }
-  .az-btn.active { border-left-color: transparent; border-bottom-color: var(--accent2); }
+  .sidebar.collapsed { width: 100%; min-width: 0; height: 32px; max-height: 32px; }
   .content { height: auto; }
 }
 </style>
@@ -333,10 +365,13 @@ header {
 
 <div class="main">
   <div class="sidebar" id="sidebar"></div>
+  <div class="sb-toggle-tab" id="sbToggleTab" onclick="toggleSidebar()" title="收合/展開側邊欄">◀</div>
   <div class="content" id="content">
     <div class="empty"><div class="empty-icon">⟳</div><div>載入資料中…</div></div>
   </div>
 </div>
+
+<button id="scrollTopBtn" onclick="scrollContentToTop()" title="跳至最上方">↑</button>
 
 <div id="toast"></div>
 
@@ -363,6 +398,7 @@ const DIALECTS = [
 ];
 let selectedDialects = new Set(); // 載入資料後會預設全部勾選（見 loadData）
 let dialectSectionOpen = true;    // 預設全部展開
+let azSectionOpen = true;         // 預設全部展開
 
 const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
@@ -530,13 +566,23 @@ function buildSidebar() {
   });
   html += `</div><div class="sb-divider"></div>`;
 
+  html += `<div class="sb-sec-hdr" onclick="toggleAzSection()">
+    字母
+    <span class="sb-arrow">${azSectionOpen ? '▾' : '▸'}</span>
+  </div>`;
+
   const visible = getVisibleEntries();
   const letters = [...new Set(visible.map(e => e.letter))].sort();
-  html += `<div class="az-list">` + letters.map(l =>
+  html += `<div class="az-list ${azSectionOpen ? '' : 'closed'}">` + letters.map(l =>
     `<button class="az-btn" id="az-${l}" onclick="jumpToLetter('${l}')">${l}</button>`
   ).join('') + `</div>`;
 
   sidebar.innerHTML = html;
+}
+
+function toggleAzSection() {
+  azSectionOpen = !azSectionOpen;
+  buildSidebar();
 }
 
 function toggleDialect(code) {
@@ -811,9 +857,19 @@ function renderEtymologyFragment(r) {
   return langHtml + wordHtml + translitHtml + transHtml;
 }
 
+// 用手動計算位移 + content.scrollTo 取代 scrollIntoView，
+// 避免多層 position:sticky 造成 scrollIntoView 在連續點擊時定位失準的問題。
+function scrollContentTo(el, extraOffset) {
+  const content = document.getElementById('content');
+  if (!el || !content) return;
+  const contentRect = content.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const offset = elRect.top - contentRect.top + content.scrollTop - (extraOffset || 0);
+  content.scrollTo({ top: offset, behavior: 'smooth' });
+}
+
 function jumpToLemma(id) {
-  const el = document.getElementById('lemma-' + id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  scrollContentTo(document.getElementById('lemma-' + id));
 }
 
 function escapeHtml(s) {
@@ -821,8 +877,12 @@ function escapeHtml(s) {
 }
 
 function jumpToLetter(letter) {
-  const el = document.getElementById('letter-' + letter);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollContentTo(document.getElementById('letter-' + letter));
+}
+
+function scrollContentToTop() {
+  const content = document.getElementById('content');
+  if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Highlight current letter in sidebar while scrolling ──
@@ -892,11 +952,44 @@ function _applyTheme(theme, silent) {
 }
 function toggleTheme() { _applyTheme(_theme === 'dark' ? 'light' : 'dark'); }
 
+// ── Sidebar collapse ──
+let _sidebarCollapsed = false;
+function toggleSidebar() {
+  _sidebarCollapsed = !_sidebarCollapsed;
+  const sb = document.getElementById('sidebar');
+  const tab = document.getElementById('sbToggleTab');
+  if (sb) sb.classList.toggle('collapsed', _sidebarCollapsed);
+  if (tab) tab.textContent = _sidebarCollapsed ? '▶' : '◀';
+  try { localStorage.setItem('hlddru_sb_collapsed', _sidebarCollapsed ? '1' : '0'); } catch (e) {}
+  setTimeout(layoutLetterGrids, 250);
+}
+
+// ── Scroll-to-top button visibility ──
+(function bindScrollTopVisibility() {
+  function bind() {
+    const el = document.getElementById('content');
+    if (!el) return;
+    el.addEventListener('scroll', () => {
+      const btn = document.getElementById('scrollTopBtn');
+      if (!btn) return;
+      btn.classList.toggle('visible', el.scrollTop > 300);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', bind);
+})();
+
 (function loadPrefs() {
   try {
     setFontSize(localStorage.getItem('hlddru_fs') || 'md');
     const th = localStorage.getItem('hlddru_theme') || 'dark';
     if (th === 'light') _applyTheme('light');
+    if (localStorage.getItem('hlddru_sb_collapsed') === '1') {
+      _sidebarCollapsed = true;
+      const sb = document.getElementById('sidebar');
+      const tab = document.getElementById('sbToggleTab');
+      if (sb) sb.classList.add('collapsed');
+      if (tab) tab.textContent = '▶';
+    }
   } catch (e) {}
 })();
 

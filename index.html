@@ -173,12 +173,21 @@ header {
 .az-btn:hover { color:var(--accent); background:var(--surface); }
 .az-btn.active { color:#0e0e0e; background:var(--accent2); }
 
-/* ── per-entry dialect label ── */
+/* ── per-entry dialect label: 6 shades of one hue for quick recognition ── */
 .entry-dial-tag {
+  display: inline-block;
   font-family: 'Space Mono', monospace;
-  font-size: 0.62rem; color: var(--accent);
-  letter-spacing: 0.06em; margin-bottom: 5px;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; margin-bottom: 6px;
+  padding: 2px 8px; border-radius: 10px;
+  background: var(--surface2); color: var(--accent);
 }
+.entry-dial-tag[data-dial="27"] { background: #7c5f1c; color: #f5f0e0; }
+.entry-dial-tag[data-dial="28"] { background: #9d7824; color: #f5f0e0; }
+.entry-dial-tag[data-dial="29"] { background: #be922b; color: #1a1814; }
+.entry-dial-tag[data-dial="30"] { background: #d3a640; color: #1a1814; }
+.entry-dial-tag[data-dial="31"] { background: #dab661; color: #1a1814; }
+.entry-dial-tag[data-dial="32"] { background: #e2c582; color: #1a1814; }
 
 /* ── CONTENT ── */
 .content { flex: 1; overflow-y: auto; }
@@ -383,10 +392,13 @@ const ETYMOLOGY_URL = './data/08-Etymology.csv';
 const EXAMPLES_URL = './data/08-Examples.csv';
 
 let entries = [];          // Lemmata rows
-let lemmataById = {};       // id -> entry
-let sensesByLemma = {};     // id -> [sense objects]
+let lemmataById = {};       // "編號_語別" -> entry
+let sensesByLemma = {};     // "編號_語別" -> [sense objects]
+let sensesBySenseId = {};   // 義項 id -> sense object (globally unique)
 let etymologyByCode = {};   // code -> etymology object
 let examplesBySense = {};   // 義項 id -> [example objects]
+
+function lemmaKey(id, dial) { return id + '_' + dial; }
 
 const DIALECTS = [
   { code: '27', name: '東' },
@@ -464,21 +476,32 @@ async function loadData() {
       };
     }).filter(e => e.word);
 
+    // 排序：先編號、再方言別（同編號代表同詞形，跨方言版本會緊鄰顯示）
+    entries.sort((a, b) => {
+      const ai = parseInt(a.id, 10), bi = parseInt(b.id, 10);
+      if (ai !== bi) return ai - bi;
+      return parseInt(a.dial, 10) - parseInt(b.dial, 10);
+    });
+
+    // lemmataById 用「編號_方言別」組合鍵，避免跨方言共用編號時互相覆蓋
     lemmataById = {};
-    entries.forEach(e => { if (e.id) lemmataById[e.id] = e; });
+    entries.forEach(e => { if (e.id) lemmataById[lemmaKey(e.id, e.dial)] = e; });
 
     // 預設全部勾選（涵蓋目前資料中實際出現的所有方言別）
     selectedDialects = new Set(entries.map(e => e.dial).filter(Boolean));
 
-    // ── Senses ──
+    // ── Senses ── 同樣用「編號_方言別」組合鍵，避免跨方言資料混在一起
     sensesByLemma = {};
+    sensesBySenseId = {};
     if (sensesText) {
       const sn = parseCSV(sensesText);
       const senseObjs = rowsToObjects(sn.headers, sn.rows);
       senseObjs.forEach(s => {
         const id = s['編號'];
+        const dial = s['語別'];
         if (!id) return;
-        (sensesByLemma[id] = sensesByLemma[id] || []).push(s);
+        (sensesByLemma[lemmaKey(id, dial)] = sensesByLemma[lemmaKey(id, dial)] || []).push(s);
+        if (s['義項']) sensesBySenseId[s['義項']] = s;
       });
     }
 
@@ -610,8 +633,16 @@ function toggleDialectSection() {
 
 function refreshAfterFilterChange() {
   buildSidebar();
-  renderContent();
-  layoutLetterGrids();
+  const content = document.getElementById('content');
+  if (content) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">⟳</div><div>更新中…</div></div>`;
+  }
+  // 延後一個 tick 執行，讓瀏覽器先把「更新中」畫面畫出來，
+  // 避免大量資料(如霧台1萬2千多筆)重繪時，畫面看起來像當機。
+  setTimeout(() => {
+    renderContent();
+    layoutLetterGrids();
+  }, 20);
 }
 
 // 依音檔檔名判斷實際存放的資料夾類別（見專案分流規則）
@@ -666,15 +697,15 @@ function renderContent() {
     }
     const url = audioUrl(e);
     const hasAudio = !!url;
-    html += `<div class="lemma-entry" id="lemma-${e.id}">
-      <div class="entry-dial-tag">${escapeHtml(dialectName(e.dial))}</div>
+    html += `<div class="lemma-entry" id="lemma-${e.id}-${e.dial}">
+      <div class="entry-dial-tag" data-dial="${e.dial}">${escapeHtml(dialectName(e.dial))}</div>
       <div class="word-row">
         <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
         <button class="play-btn" ${hasAudio ? '' : 'disabled'}
           title="${hasAudio ? '播放音檔' : '無音檔'}"
           onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
       </div>
-      ${renderSenseSection(e.id)}
+      ${renderSenseSection(e.id, e.dial)}
     </div>`;
   });
   if (lastLetter !== null) html += '</div>'; // close final letter-group
@@ -683,13 +714,13 @@ function renderContent() {
 }
 
 // ── Senses + Etymology rendering ──
-function renderSenseSection(lemmaId) {
-  const senses = sensesByLemma[lemmaId];
+function renderSenseSection(lemmaId, dial) {
+  const senses = sensesByLemma[lemmaKey(lemmaId, dial)];
   if (!senses || !senses.length) return '';
 
   const multi = senses.length > 1;
   const senseEtyRaw = senses.map(s => (s['語源'] || '').trim());
-  const senseEtyResolved = senseEtyRaw.map(raw => raw ? resolveEtymologyField(raw) : null);
+  const senseEtyResolved = senseEtyRaw.map(raw => raw ? resolveEtymologyField(raw, dial) : null);
 
   const shared = senseEtyRaw.every(r => r && r === senseEtyRaw[0]) && senseEtyResolved[0];
 
@@ -713,9 +744,9 @@ function renderSenseSection(lemmaId) {
     if (exList && exList.length) {
       html += exList.map(renderExampleBlock).join('');
     }
-    html += renderNumericRefLine('近義詞', s['近義詞']);
-    html += renderNumericRefLine('反義詞', s['反義詞']);
-    html += renderNumericRefLine('相關詞', s['相關詞']);
+    html += renderNumericRefLine('近義詞', s['近義詞'], dial);
+    html += renderNumericRefLine('反義詞', s['反義詞'], dial);
+    html += renderNumericRefLine('相關詞', s['相關詞'], dial);
     html += renderNoteLine(s['附註']);
     html += `</div>`;
   });
@@ -765,11 +796,11 @@ function highlightTerm(text, term) {
 }
 
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
-function renderNumericRefLine(label, raw) {
+function renderNumericRefLine(label, raw, dial) {
   raw = (raw || '').trim();
   if (!raw) return '';
   const resolved = raw.split('+').map(t => t.trim()).filter(Boolean)
-    .map(resolveEtymologyToken).filter(r => r && r.type === 'numeric');
+    .map(t => resolveEtymologyToken(t, dial)).filter(r => r && r.type === 'numeric');
   if (!resolved.length) return '';
   const inner = resolved.map(renderEtymologyFragment).join(' + ');
   return `<div class="ref-row"><span class="ref-label">${label}</span>${inner}</div>`;
@@ -783,9 +814,9 @@ function renderNoteLine(raw) {
 }
 
 // 解析單一義項的「語源」欄位（可能是 A+B+C 多筆），回傳 {html} 或 null（查無任何有效來源）
-function resolveEtymologyField(raw) {
+function resolveEtymologyField(raw, dial) {
   const tokens = raw.split('+').map(t => t.trim()).filter(Boolean);
-  const resolved = tokens.map(resolveEtymologyToken).filter(Boolean);
+  const resolved = tokens.map(t => resolveEtymologyToken(t, dial)).filter(Boolean);
   if (!resolved.length) return null;
 
   const isPureNumeric = resolved.every(r => r.type === 'numeric');
@@ -794,28 +825,28 @@ function resolveEtymologyField(raw) {
   return { html: prefix + inner + '。' };
 }
 
-function resolveEtymologyToken(token) {
-  // 純數字（可選 #義項編號）：指向本詞典另一詞目，或該詞目下特定義項
+function resolveEtymologyToken(token, dial) {
+  // 純數字（可選 #義項編號）：指向本詞典另一詞目（同一方言別內），或該詞目下特定義項
   const numMatch = token.match(/^(\d{5,6})(?:#(\d+))?$/);
   if (numMatch) {
     const lemmaId = numMatch[1];
     const senseId = numMatch[2];
-    const targetLemma = lemmataById[lemmaId];
-    if (!targetLemma) return null; // 查無對應詞目，略過此筆
+    const targetLemma = lemmataById[lemmaKey(lemmaId, dial)];
+    if (!targetLemma) return null; // 同方言別內查無對應詞目，略過此筆
 
     let trans = '';
     if (senseId) {
-      const targetSense = (sensesByLemma[lemmaId] || []).find(s => s['義項'] === senseId);
-      if (!targetSense) return null; // 查無對應義項，略過此筆
+      const targetSense = sensesBySenseId[senseId];
+      if (!targetSense || targetSense['編號'] !== lemmaId) return null; // 查無對應義項，略過此筆
       trans = (targetSense['翻譯'] || '').trim();
     } else {
-      trans = (sensesByLemma[lemmaId] || [])
+      trans = (sensesByLemma[lemmaKey(lemmaId, dial)] || [])
         .map(s => (s['翻譯'] || '').trim()).filter(Boolean).join('；');
     }
-    return { type: 'numeric', id: lemmaId, word: targetLemma.word, trans };
+    return { type: 'numeric', id: lemmaId, dial, word: targetLemma.word, trans };
   }
 
-  // 拉丁字母+數字：指向 08-Etymology.csv
+  // 拉丁字母+數字：指向 08-Etymology.csv（跟方言別無關，全詞典共用）
   if (/^[A-Za-z]{3}\d+$/.test(token)) {
     const row = etymologyByCode[token];
     if (!row) return null; // 查無對應資料，略過此筆
@@ -845,7 +876,7 @@ function resolveEtymologyToken(token) {
 
 function renderEtymologyFragment(r) {
   if (r.type === 'numeric') {
-    const wordHtml = `<a href="#lemma-${r.id}" class="ety-word" onclick="event.preventDefault();jumpToLemma('${r.id}')">${escapeHtml(r.word)}</a>`;
+    const wordHtml = `<a href="#lemma-${r.id}-${r.dial}" class="ety-word" onclick="event.preventDefault();jumpToLemma('${r.id}','${r.dial}')">${escapeHtml(r.word)}</a>`;
     return wordHtml + (r.trans ? `「${escapeHtml(r.trans)}」` : '');
   }
   const langHtml = `<span class="ety-lang">${escapeHtml(r.lang)}</span>`;
@@ -857,19 +888,39 @@ function renderEtymologyFragment(r) {
   return langHtml + wordHtml + translitHtml + transHtml;
 }
 
-// 用手動計算位移 + content.scrollTo 取代 scrollIntoView，
-// 避免多層 position:sticky 造成 scrollIntoView 在連續點擊時定位失準的問題。
+// 自行實作平滑捲動（用 requestAnimationFrame），取代瀏覽器原生 scrollTo({behavior:'smooth'})。
+// 原生做法在「上一次捲動動畫還沒播完、又馬上觸發下一次」時，有些瀏覽器會直接忽略新的請求，
+// 導致連續快速點擊不同字母時，後面的點擊看起來「沒反應」。自行控制動畫可以保證新的呼叫
+// 永遠會取消並取代前一個還在進行中的捲動。
+let _scrollAnimId = null;
+function smoothScrollContentTo(targetTop) {
+  const content = document.getElementById('content');
+  if (!content) return;
+  if (_scrollAnimId) cancelAnimationFrame(_scrollAnimId);
+  const startTop = content.scrollTop;
+  const distance = targetTop - startTop;
+  const duration = 420;
+  const startTime = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out
+    content.scrollTop = startTop + distance * eased;
+    _scrollAnimId = (t < 1) ? requestAnimationFrame(step) : null;
+  }
+  _scrollAnimId = requestAnimationFrame(step);
+}
+
 function scrollContentTo(el, extraOffset) {
   const content = document.getElementById('content');
   if (!el || !content) return;
   const contentRect = content.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
   const offset = elRect.top - contentRect.top + content.scrollTop - (extraOffset || 0);
-  content.scrollTo({ top: offset, behavior: 'smooth' });
+  smoothScrollContentTo(offset);
 }
 
-function jumpToLemma(id) {
-  scrollContentTo(document.getElementById('lemma-' + id));
+function jumpToLemma(id, dial) {
+  scrollContentTo(document.getElementById('lemma-' + id + '-' + dial));
 }
 
 function escapeHtml(s) {
@@ -881,8 +932,7 @@ function jumpToLetter(letter) {
 }
 
 function scrollContentToTop() {
-  const content = document.getElementById('content');
-  if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+  smoothScrollContentTo(0);
 }
 
 // ── Highlight current letter in sidebar while scrolling ──

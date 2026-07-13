@@ -538,14 +538,20 @@ async function loadData() {
 }
 
 // ── Grid layout: same-row entries share equal height, row-first fill (left→right) ──
+// 效能重點：先「只讀一次」共用容器的寬度，再統一「只寫」所有 letter-group 的樣式。
+// 舊寫法對每個 letter-group 各自讀取 clientWidth 又緊接著寫入樣式，在含有上萬個節點的
+// 大型頁面裡，每次讀取都會強迫瀏覽器同步重新計算整份版面(layout thrashing)，
+// 20多組輪流讀寫下來就是明顯的卡頓來源。
 function layoutLetterGrids() {
-  document.querySelectorAll('.letter-group').forEach(group => {
-    const items = group.children.length;
-    if (!items) return;
-    const width = group.clientWidth || (group.parentElement ? group.parentElement.clientWidth : 340);
-    const columns = Math.max(1, Math.floor(width / 340));
+  const groups = document.querySelectorAll('.letter-group');
+  if (!groups.length) return;
+  const content = document.getElementById('content');
+  const width = (content && content.clientWidth) || 1000;
+  const columns = Math.max(1, Math.floor(width / 340));
+  const colStyle = `repeat(${columns}, minmax(0, 1fr))`;
+  groups.forEach(group => {
     group.style.gridAutoFlow = 'row';
-    group.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+    group.style.gridTemplateColumns = colStyle;
   });
 }
 

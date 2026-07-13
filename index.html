@@ -802,14 +802,19 @@ function highlightTerm(text, term) {
 }
 
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
+// 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
+// 支援 | 分隔多筆資料，每筆各自佔一行（同一行內仍可用 + 連結多個來源）
 function renderNumericRefLine(label, raw, dial) {
   raw = (raw || '').trim();
   if (!raw) return '';
-  const resolved = raw.split('+').map(t => t.trim()).filter(Boolean)
-    .map(t => resolveEtymologyToken(t, dial)).filter(r => r && r.type === 'numeric');
-  if (!resolved.length) return '';
-  const inner = resolved.map(renderEtymologyFragment).join(' + ');
-  return `<div class="ref-row"><span class="ref-label">${label}</span>${inner}</div>`;
+  const groups = raw.split('|').map(g => g.trim()).filter(Boolean);
+  return groups.map(group => {
+    const resolved = group.split('+').map(t => t.trim()).filter(Boolean)
+      .map(t => resolveEtymologyToken(t, dial)).filter(r => r && r.type === 'numeric');
+    if (!resolved.length) return '';
+    const inner = resolved.map(renderEtymologyFragment).join(' + ');
+    return `<div class="ref-row"><span class="ref-label">${label}</span>${inner}</div>`;
+  }).join('');
 }
 
 // 附註：純文字，不解析
@@ -819,16 +824,26 @@ function renderNoteLine(raw) {
   return `<div class="ref-row"><span class="ref-label">附註</span>${escapeHtml(raw)}</div>`;
 }
 
-// 解析單一義項的「語源」欄位（可能是 A+B+C 多筆），回傳 {html} 或 null（查無任何有效來源）
-function resolveEtymologyField(raw, dial) {
-  const tokens = raw.split('+').map(t => t.trim()).filter(Boolean);
+// 解析單一義項的「語源」欄位。
+// + 代表同一句內組合多個來源（構詞分析，共用一個「源於」前綴）。
+// | 代表完全獨立的多筆語源說法，各自成句（各自判斷是否要有「源於」），
+// 句子之間用「，」連接，最後只有一個句號。
+function resolveEtymologyGroup(rawGroup, dial) {
+  const tokens = rawGroup.split('+').map(t => t.trim()).filter(Boolean);
   const resolved = tokens.map(t => resolveEtymologyToken(t, dial)).filter(Boolean);
   if (!resolved.length) return null;
 
   const isPureNumeric = resolved.every(r => r.type === 'numeric');
   const inner = resolved.map(renderEtymologyFragment).join(' + ');
   const prefix = isPureNumeric ? '' : '源於';
-  return { html: prefix + inner + '。' };
+  return prefix + inner;
+}
+
+function resolveEtymologyField(raw, dial) {
+  const groups = raw.split('|').map(g => g.trim()).filter(Boolean);
+  const rendered = groups.map(g => resolveEtymologyGroup(g, dial)).filter(g => g !== null);
+  if (!rendered.length) return null;
+  return { html: rendered.join('，') + '。' };
 }
 
 function resolveEtymologyToken(token, dial) {

@@ -173,13 +173,14 @@ header {
 .az-btn:hover { color:var(--accent); background:var(--surface); }
 .az-btn.active { color:#0e0e0e; background:var(--accent2); }
 
-/* ── per-entry dialect label: 6 shades of one hue for quick recognition ── */
+/* ── per-entry dialect label: full-width banner, 6 shades of one hue ── */
 .entry-dial-tag {
-  display: inline-block;
+  display: block;
+  margin: -12px -14px 10px -14px;
+  padding: 6px 14px;
   font-family: 'Space Mono', monospace;
-  font-size: 0.62rem; font-weight: 700;
-  letter-spacing: 0.06em; margin-bottom: 6px;
-  padding: 2px 8px; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 700;
+  letter-spacing: 0.08em;
   background: var(--surface2); color: var(--accent);
 }
 .entry-dial-tag[data-dial="27"] { background: #7c5f1c; color: #f5f0e0; }
@@ -204,7 +205,6 @@ header {
 .content-info span { color: var(--accent); }
 
 .letter-hdr {
-  position: sticky; top: 0; z-index: 6;
   background: var(--bg);
   padding: 8px 20px;
   font-family: 'Noto Serif TC', serif;
@@ -225,6 +225,7 @@ header {
   border-radius: 8px;
   padding: 12px 14px 14px;
   transition: background 0.15s;
+  overflow: hidden;
 }
 .lemma-entry:hover { background: var(--surface); }
 
@@ -411,6 +412,7 @@ const DIALECTS = [
 let selectedDialects = new Set(); // 載入資料後會預設全部勾選（見 loadData）
 let dialectSectionOpen = true;    // 預設全部展開
 let azSectionOpen = true;         // 預設全部展開
+let activeLetter = null;          // 目前顯示的字母（分頁式渲染，一次只渲染一個字母）
 
 const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
@@ -603,7 +605,7 @@ function buildSidebar() {
   const visible = getVisibleEntries();
   const letters = [...new Set(visible.map(e => e.letter))].sort();
   html += `<div class="az-list ${azSectionOpen ? '' : 'closed'}">` + letters.map(l =>
-    `<button class="az-btn" id="az-${l}" onclick="jumpToLetter('${l}')">${l}</button>`
+    `<button class="az-btn ${l === activeLetter ? 'active' : ''}" id="az-${l}" onclick="switchLetter('${l}')">${l}</button>`
   ).join('') + `</div>`;
 
   sidebar.innerHTML = html;
@@ -692,15 +694,18 @@ function renderContent() {
     return;
   }
 
-  let html = `<div class="content-info"><span>${visible.length.toLocaleString()}</span> 筆詞條</div>`;
-  let lastLetter = null;
-  visible.forEach((e) => {
-    if (e.letter !== lastLetter) {
-      if (lastLetter !== null) html += '</div>'; // close previous letter-group
-      html += `<div class="letter-hdr" id="letter-${e.letter}" data-letter="${e.letter}">${e.letter}</div>`;
-      html += `<div class="letter-group">`;
-      lastLetter = e.letter;
-    }
+  // 確保 activeLetter 有效（例如切換方言後，原本的字母可能已經沒有資料）
+  const availableLetters = [...new Set(visible.map(e => e.letter))].sort();
+  if (!activeLetter || !availableLetters.includes(activeLetter)) {
+    activeLetter = availableLetters[0];
+  }
+
+  const pageEntries = visible.filter(e => e.letter === activeLetter);
+
+  let html = `<div class="content-info"><span>${visible.length.toLocaleString()}</span> 筆詞條 · 目前顯示「<span>${activeLetter.toUpperCase()}</span>」共 ${pageEntries.length.toLocaleString()} 筆</div>`;
+  html += `<div class="letter-hdr">${activeLetter.toUpperCase()}</div>`;
+  html += `<div class="letter-group">`;
+  pageEntries.forEach((e) => {
     const url = audioUrl(e);
     const hasAudio = !!url;
     html += `<div class="lemma-entry" id="lemma-${e.id}-${e.dial}">
@@ -714,9 +719,24 @@ function renderContent() {
       ${renderSenseSection(e.id, e.dial)}
     </div>`;
   });
-  if (lastLetter !== null) html += '</div>'; // close final letter-group
+  html += `</div>`;
   content.innerHTML = html;
-  observeLetters();
+}
+
+// 切換分頁字母：只渲染該字母的詞條，大幅減少單次渲染量
+function switchLetter(letter, afterRender) {
+  activeLetter = letter;
+  buildSidebar();
+  const content = document.getElementById('content');
+  if (content) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">⟳</div><div>載入中…</div></div>`;
+  }
+  setTimeout(() => {
+    renderContent();
+    layoutLetterGrids();
+    scrollContentToTop();
+    if (afterRender) setTimeout(afterRender, 60);
+  }, 10);
 }
 
 // ── Senses + Etymology rendering ──
@@ -742,10 +762,10 @@ function renderSenseSection(lemmaId, dial) {
     const pos = (s['詞類'] || '').trim();
     const trans = (s['翻譯'] || '').trim();
     html += `<div class="sense-item">`;
+    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${pos ? `<span class="ref-label">${escapeHtml(pos)}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
     if (!shared && senseEtyResolved[idx]) {
       html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
     }
-    html += `<div class="sense-head">${num}${lvl ? `<span class="level-icons">${lvl}</span>` : ''}${pos ? `<span class="ref-label">${escapeHtml(pos)}</span>` : ''}${trans ? `<span class="sense-trans">${escapeHtml(trans)}</span>` : ''}</div>`;
     const exList = examplesBySense[s['義項']];
     if (exList && exList.length) {
       html += exList.map(renderExampleBlock).join('');
@@ -785,11 +805,24 @@ function renderExampleBlock(ex) {
   </div>`;
 }
 
-// 在文字中找出目標詞彙/翻譯，套上金色＋前後間距（用於例句/例句翻譯的呼應標示）
+// 在文字中找出目標詞彙/翻譯，套上金色＋前後間距（用於例句/例句翻譯的呼應標示）。
+// 魯凱語是黏著語，詞素常常直接黏在一起，不能用「詞界」去限制比對範圍
+// （那樣反而會漏掉很多合法的黏著變化），一律採用單純子字串比對。
+// 若自動比對抓錯，可以直接在 08-Examples.csv 的語句/語句翻譯欄位裡，
+// 用 ** 手動框出正確位置，例如：Padulrudulruaku ku **atukaanganeli** luiya.
+// 一旦偵測到 ** 標記，就只採用人工標記的位置，不再自動比對。
 function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function highlightTerm(text, term) {
+  if (text.includes('**')) {
+    return text.split(/(\*\*[^*]+\*\*)/g).map(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return `<span class="term-highlight">${escapeHtml(part.slice(2, -2))}</span>`;
+      }
+      return escapeHtml(part);
+    }).join('');
+  }
   if (!term) return escapeHtml(text);
-  const re = new RegExp(escapeRegex(term), 'g');
+  const re = new RegExp(escapeRegex(term), 'gi');
   let result = '', lastIndex = 0, m;
   while ((m = re.exec(text)) !== null) {
     result += escapeHtml(text.slice(lastIndex, m.index));
@@ -801,7 +834,6 @@ function highlightTerm(text, term) {
   return result;
 }
 
-// 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
 // 支援 | 分隔多筆資料，每筆各自佔一行（同一行內仍可用 + 連結多個來源）
 function renderNumericRefLine(label, raw, dial) {
@@ -941,36 +973,23 @@ function scrollContentTo(el, extraOffset) {
 }
 
 function jumpToLemma(id, dial) {
-  scrollContentTo(document.getElementById('lemma-' + id + '-' + dial));
+  const target = lemmataById[lemmaKey(id, dial)];
+  if (!target) return;
+  if (target.letter !== activeLetter) {
+    switchLetter(target.letter, () => {
+      scrollContentTo(document.getElementById('lemma-' + id + '-' + dial));
+    });
+  } else {
+    scrollContentTo(document.getElementById('lemma-' + id + '-' + dial));
+  }
 }
 
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function jumpToLetter(letter) {
-  scrollContentTo(document.getElementById('letter-' + letter));
-}
-
 function scrollContentToTop() {
   smoothScrollContentTo(0);
-}
-
-// ── Highlight current letter in sidebar while scrolling ──
-let _observer = null;
-function observeLetters() {
-  if (_observer) _observer.disconnect();
-  const hdrs = document.querySelectorAll('.letter-hdr');
-  _observer = new IntersectionObserver((entriesObs) => {
-    entriesObs.forEach(en => {
-      if (en.isIntersecting) {
-        document.querySelectorAll('.az-btn').forEach(b => b.classList.remove('active'));
-        const btn = document.getElementById('az-' + en.target.dataset.letter);
-        if (btn) btn.classList.add('active');
-      }
-    });
-  }, { root: document.getElementById('content'), threshold: 0, rootMargin: '0px 0px -85% 0px' });
-  hdrs.forEach(h => _observer.observe(h));
 }
 
 // ── Audio playback ──

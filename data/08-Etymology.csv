@@ -95,6 +95,7 @@ PAN30419,原始南島語,*ŋusuq,,,口鼻,https://acd.clld.org/cognatesets/30419
 PAN30815,原始南島語,*paen,,,餌,https://acd.clld.org/cognatesets/30815
 PAN30474,原始南島語,*pajay,,,稻,https://acd.clld.org/cognatesets/30474
 PAN27271,原始南島語,*paliSi,,,禁忌,https://acd.clld.org/cognatesets/27271
+PAN27272,原始南島語,*panaq,,,射擊,https://acd.clld.org/cognatesets/29847
 PAN30995,原始南島語,*paNid,,,翅膀,https://acd.clld.org/cognatesets/30995
 PAN27380,原始南島語,*paŋudaN,,,露兜樹,https://acd.clld.org/cognatesets/27380
 PAN32879,原始南島語,*paqeju,,,膽囊,https://acd.clld.org/cognatesets/32879
@@ -113,6 +114,7 @@ PAN32003,原始南島語,*qalima,,,手,https://acd.clld.org/cognatesets/32003
 PAN27606,原始南島語,*qaNi-,,,(與神靈、自然有 關),https://acd.clld.org/cognatesets/27606
 PAN27710,原始南島語,*qañud,,,漂流,https://acd.clld.org/cognatesets/27710
 PAN27619,原始南島語,*qanup,,,打獵,https://acd.clld.org/cognatesets/27619
+PAN27616,原始南島語,*qaNuaŋ,,,大型反芻動物(水牛?),https://acd.clld.org/cognatesets/27616
 PAN27645,原始南島語,*qaSelu,,,杵,https://acd.clld.org/cognatesets/27645
 PAN27687,原始南島語,*qayam,,,鳥,https://acd.clld.org/cognatesets/27687
 PAN27711,原始南島語,*qebel,,,煙,https://acd.clld.org/cognatesets/27711
@@ -153,6 +155,7 @@ PAN30004,原始南島語,*taRuqan,,,工寮,https://acd.clld.org/cognatesets/3000
 PAN30753,原始南島語,*telu,,,三,https://acd.clld.org/cognatesets/30753
 PAN28495,原始南島語,*timij,,,下巴,https://acd.clld.org/cognatesets/28495
 PAN30352,原始南島語,*timus,,,鹽,https://acd.clld.org/cognatesets/30352
+PAN30903,原始南島語,*tinun,,,織布,https://acd.clld.org/cognatesets/30903
 PAN28681,原始南島語,*utaq,,,嘔吐,https://acd.clld.org/cognatesets/28681
 PAN30076,原始南島語,*walay,,,絲線,https://acd.clld.org/cognatesets/30076
 PAN28735,原始南島語,*walu,,,八,https://acd.clld.org/cognatesets/28735
@@ -185,6 +188,7 @@ JPN091,日語,祈り,いのり,inori,,
 JPN096,日語,自動車,じどうしゃ,jidōsha,,
 JPN101,日語,時間,じかん,jikan,時間；小時,
 JPN106,日語,勝ち,かち,kachi,勝利,
+JPN109,日語,切符,きっぷ,kippu,,
 JPN111,日語,汽車,きしゃ,kisha,,
 JPN112,日語,校長,こうちょう,kōchō,,
 JPN113,日語,校長先生,こうちょうせんせい,kōchō sensei,,
@@ -208,11 +212,13 @@ JPN181,日語,パン,,pan,,
 JPN186,日語,パンツ,,pantsu,內褲,
 JPN191,日語,桜,サクラ,sakura,,
 JPN196,日語,皿,さら,sara,,
+JPN197,日語,生徒,せいと,seito,,
 JPN199,日語,石鹸,せっけん,sekken,,
 JPN201,日語,先生,せんせい,sensei,,
 JPN206,日語,車輪,しゃりん,sharin,,
 JPN211,日語,写真,しゃしん,shashin,,
 JPN216,日語,神父さん,しんぷさん,shinpu-san,,
+JPN219,日語,醤油,しょうゆ,shōyu,,
 JPN221,日語,蕎麦,そば,soba,,
 JPN226,日語,煙草,タバコ,tabako,,
 JPN229,日語,タイヤ,,taiya,,
@@ -232,8 +238,10 @@ JPN281,日語,象,ゾウ,zō,,
 ENG001,英語,bus,,,,
 FRA001,法語,savon,,,肥皂,
 HAK001,客語,𠊎,ngaiˇ,,我,
+HAK002,客語,客家,hagˋ gaˊ,,,
 NAN001,閩語,斧頭,póo-thâu,pó͘-thâu,,
 NAN006,閩語,蕹菜,ìng-tshài,èng-chhài,,
+NAN008,閩語,甘蔗,kam-tsià,kam-chià,,
 NAN009,閩語,韭菜,kú-tshài,kú-chhài,,
 NAN011,閩語,鎖匙,só-sî,só-sî,,
 NAN016,閩語,豆油,tāu-iû,tāu-iû,,
@@ -255,3 +263,4 @@ ZHO026,華語,電冰箱,,,,
 ZHO031,華語,客家人,,,,
 ZHO036,華語,菜刀,,,,
 ZHO041,華語,空心菜,,,,
+ZHO046,華語,麵條,,,,

@@ -240,6 +240,7 @@ header {
   letter-spacing: 0.01em;
 }
 .ne-tag { opacity: 0.25; font-weight: 400; }
+.affix-dash { opacity: 0.25; }
 
 /* ── SENSES ── */
 .sense-list { margin: 6px 0 0 20px; }
@@ -442,10 +443,42 @@ function rowsToObjects(headers, rows) {
   });
 }
 
+// 詞綴標記：詞形最前方和/或最後方連續的 - 代表前綴/中綴/後綴標記，
+// 不列入字母排序依據，顯示時以半透明呈現（跟 ne 一樣的透明度），
+// 但仍算是詞形本身的一部分（影響之後的搜尋功能，所以不能整個拿掉，只是視覺淡化）。
+function splitAffixDashes(word) {
+  let core = word;
+  let lead = '', trail = '';
+  const leadMatch = core.match(/^-+/);
+  if (leadMatch) { lead = leadMatch[0]; core = core.slice(lead.length); }
+  const trailMatch = core.match(/-+$/);
+  if (trailMatch) { trail = trailMatch[0]; core = core.slice(0, core.length - trail.length); }
+  return { lead, core, trail };
+}
+
 function firstLetter(word) {
   let w = (word || '').trim();
   if (w.startsWith('\u2019')) w = w.slice(1); // leading glottal-stop mark not used for indexing
+  w = splitAffixDashes(w).core || w; // 詞綴 - 不列入排序依據
   return w ? w[0].toLowerCase() : '#';
+}
+
+// 字母排序順序：é 排在 e 後方，ɨ 排在 i 後方（不是照萬國碼位置排序）
+const LETTER_ORDER = ['a','b','c','d','e','é','g','h','i','ɨ','k','l','m','n','o','p','r','s','t','u','v','w','y','z'];
+function compareLetters(a, b) {
+  const ia = LETTER_ORDER.indexOf(a), ib = LETTER_ORDER.indexOf(b);
+  if (ia === -1 && ib === -1) return a < b ? -1 : (a > b ? 1 : 0);
+  if (ia === -1) return 1;  // 不在表列裡的排最後
+  if (ib === -1) return -1;
+  return ia - ib;
+}
+function sortLetters(letters) { return letters.slice().sort(compareLetters); }
+
+function renderWordWithAffix(word) {
+  const { lead, core, trail } = splitAffixDashes(word || '');
+  const leadHtml = lead ? `<span class="affix-dash">${escapeHtml(lead)}</span>` : '';
+  const trailHtml = trail ? `<span class="affix-dash">${escapeHtml(trail)}</span>` : '';
+  return leadHtml + escapeHtml(core) + trailHtml;
 }
 
 async function loadData() {
@@ -603,7 +636,7 @@ function buildSidebar() {
   </div>`;
 
   const visible = getVisibleEntries();
-  const letters = [...new Set(visible.map(e => e.letter))].sort();
+  const letters = sortLetters([...new Set(visible.map(e => e.letter))]);
   html += `<div class="az-list ${azSectionOpen ? '' : 'closed'}">` + letters.map(l =>
     `<button class="az-btn ${l === activeLetter ? 'active' : ''}" id="az-${l}" onclick="switchLetter('${l}')">${l}</button>`
   ).join('') + `</div>`;
@@ -695,7 +728,7 @@ function renderContent() {
   }
 
   // 確保 activeLetter 有效（例如切換方言後，原本的字母可能已經沒有資料）
-  const availableLetters = [...new Set(visible.map(e => e.letter))].sort();
+  const availableLetters = sortLetters([...new Set(visible.map(e => e.letter))]);
   if (!activeLetter || !availableLetters.includes(activeLetter)) {
     activeLetter = availableLetters[0];
   }
@@ -711,7 +744,7 @@ function renderContent() {
     html += `<div class="lemma-entry" id="lemma-${e.id}-${e.dial}">
       <div class="entry-dial-tag" data-dial="${e.dial}">${escapeHtml(dialectName(e.dial))}</div>
       <div class="word-row">
-        <div class="word-main">${escapeHtml(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
+        <div class="word-main">${renderWordWithAffix(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
         <button class="play-btn" ${hasAudio ? '' : 'disabled'}
           title="${hasAudio ? '播放音檔' : '無音檔'}"
           onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>

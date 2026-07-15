@@ -53,6 +53,7 @@ body {
   color: var(--text);
   font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
   min-height: 100vh;
+  display: flex; flex-direction: column;
 }
 
 /* ── HEADER ── */
@@ -99,8 +100,69 @@ header {
 
 .header-ctrls { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
 
+/* ── SEARCH BAR ── */
+.controls {
+  padding: 12px 28px; border-bottom: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 9px; align-items: center; background: var(--surface);
+}
+.search-wrap { position: relative; flex: 1; min-width: 160px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 0.9rem; }
+input[type="text"] {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 12px 8px 36px; border-radius: 7px;
+  font-family: 'jf-openhuninn', 'Noto Serif TC', serif;
+  font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+}
+input[type="text"]:focus { border-color: var(--accent); }
+input[type="text"]::placeholder { color: var(--muted); }
+
+.char-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.char-btn {
+  font-family: 'Space Mono', monospace; font-size: 0.85rem;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 9px; border-radius: 6px;
+  cursor: pointer; transition: all 0.13s; line-height: 1;
+  min-width: 30px; text-align: center;
+}
+.char-btn:hover { border-color: var(--accent2); background: var(--surface); }
+.char-btn:active { transform: scale(0.93); }
+.case-btn {
+  font-family: 'Space Mono', monospace; font-size: 0.68rem;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); padding: 4px 8px; border-radius: 6px;
+  cursor: pointer; transition: all 0.13s; letter-spacing: 0.05em;
+}
+.case-btn:hover { border-color: var(--accent); color: var(--accent); }
+.case-btn.upper { border-color: var(--accent2); color: var(--accent2); background: rgba(139,196,168,0.08); }
+
+.search-scope { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.scope-label {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Space Mono', monospace; font-size: 0.68rem;
+  color: var(--muted); cursor: pointer; user-select: none;
+  transition: color 0.13s;
+}
+.scope-label:hover { color: var(--text); }
+.scope-label.active { color: var(--accent2); }
+.scope-chk {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--border); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; transition: all 0.12s; color: transparent;
+}
+.scope-label.active .scope-chk { background: var(--accent2); border-color: var(--accent2); color: #0e0e0e; }
+
+.btn {
+  padding: 7px 15px; border-radius: 7px; border: 1px solid var(--border);
+  font-family: 'Space Mono', monospace; font-size: 0.7rem; cursor: pointer;
+  letter-spacing: 0.05em; transition: all 0.2s; text-transform: uppercase;
+  background: var(--surface2); color: var(--text);
+}
+.btn-ghost { background: transparent; color: var(--muted); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ── LAYOUT ── */
-.main { display: flex; height: calc(100vh - 66px); position: relative; }
+.main { display: flex; flex: 1; min-height: 0; position: relative; }
 
 /* ── SIDEBAR (方言 + A-Z) ── */
 .sidebar {
@@ -374,6 +436,30 @@ header {
   </div>
 </header>
 
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜尋…" oninput="onSearchInput()">
+  </div>
+  <div class="char-btns">
+    <button class="char-btn" onclick="insertChar('é')" title="é (U+00E9)">é</button>
+    <button class="char-btn" onclick="insertChar('ɨ')" title="ɨ (U+0268)">ɨ</button>
+    <button class="case-btn" id="caseCycleBtn" onclick="cycleCase()" title="大小寫切換">abc</button>
+  </div>
+  <div class="search-scope">
+    <label class="scope-label" id="scope-exact" onclick="toggleExact()" title="僅顯示完全相符的結果">
+      <span class="scope-chk" id="schk-exact" style="color:transparent;">✓</span> 精確
+    </label>
+    <label class="scope-label active" id="scope-lemma" onclick="toggleScope('lemma')" title="僅搜尋詞目及定義">
+      <span class="scope-chk" id="schk-lemma">✓</span> 詞目
+    </label>
+    <label class="scope-label active" id="scope-example" onclick="toggleScope('example')" title="僅搜尋例句及其中文翻譯">
+      <span class="scope-chk" id="schk-example">✓</span> 例句
+    </label>
+  </div>
+  <button class="btn btn-ghost" onclick="clearSearchFilters()">清除全部</button>
+</div>
+
 <div class="main">
   <div class="sidebar" id="sidebar"></div>
   <div class="sb-toggle-tab" id="sbToggleTab" onclick="toggleSidebar()" title="收合/展開側邊欄">◀</div>
@@ -414,6 +500,17 @@ let selectedDialects = new Set(); // 載入資料後會預設全部勾選（見 
 let dialectSectionOpen = true;    // 預設全部展開
 let azSectionOpen = true;         // 預設全部展開
 let activeLetter = null;          // 目前顯示的字母（分頁式渲染，一次只渲染一個字母）
+
+const LEVELS = ['B', 'I', 'S', 'U'];
+let selectedLevels = new Set(LEVELS); // 預設全部勾選
+let levelSectionOpen = true;          // 預設全部展開
+
+// ── 搜尋 ──
+let searchQuery = '';
+let searchExact = false;
+let searchScope = { lemma: true, example: true }; // 兩者都開＝不限範圍
+const SPECIAL_CHARS = { 'é': 'É', 'ɨ': 'Ɨ' };
+let _charCase = 'lower'; // 'lower' | 'upper'
 
 const LEVEL_ICONS = { 'B': '★★★★', 'I': '★★★☆', 'S': '★★☆☆', 'U': '★☆☆☆' };
 
@@ -596,9 +693,20 @@ window.addEventListener('resize', () => {
   _resizeTimer = setTimeout(layoutLetterGrids, 150);
 });
 
+function entryPassesLevelFilter(e) {
+  if (selectedLevels.size >= LEVELS.length) return true; // 全選 = 不篩選
+  const senses = sensesByLemma[lemmaKey(e.id, e.dial)];
+  if (!senses || !senses.length) return false;
+  return senses.some(s => selectedLevels.has((s['等級'] || '').trim()));
+}
+
 function getVisibleEntries() {
   if (selectedDialects.size === 0) return [];
-  return entries.filter(e => selectedDialects.has(e.dial));
+  let result = entries.filter(e => selectedDialects.has(e.dial));
+  if (selectedLevels.size < LEVELS.length) {
+    result = result.filter(entryPassesLevelFilter);
+  }
+  return result;
 }
 
 function dialectName(code) {
@@ -641,7 +749,46 @@ function buildSidebar() {
     `<button class="az-btn ${l === activeLetter ? 'active' : ''}" id="az-${l}" onclick="switchLetter('${l}')">${l}</button>`
   ).join('') + `</div>`;
 
+  html += `<div class="sb-divider"></div>`;
+  html += `<div class="sb-sec-hdr" onclick="toggleLevelSection()">
+    等級
+    <span class="sb-arrow">${levelSectionOpen ? '▾' : '▸'}</span>
+  </div>
+  <div class="sb-sec-body ${levelSectionOpen ? '' : 'closed'}">
+    <div class="sb-all-row ${selectedLevels.size >= LEVELS.length ? 'sel' : ''}" onclick="toggleAllLevels()">
+      <div class="sb-chk ${selectedLevels.size >= LEVELS.length ? 'sel' : ''}">${selectedLevels.size >= LEVELS.length ? '✓' : ''}</div>
+      <span>全部</span>
+    </div>`;
+  LEVELS.forEach(lvl => {
+    const sel = selectedLevels.has(lvl);
+    html += `<div class="sb-l2-item ${sel ? 'sel' : ''}" onclick="toggleLevel('${lvl}')">
+      <div class="sb-chk ${sel ? 'sel' : ''}">${sel ? '✓' : ''}</div>
+      <span class="level-icons">${LEVEL_ICONS[lvl]}</span>
+    </div>`;
+  });
+  html += `</div>`;
+
   sidebar.innerHTML = html;
+}
+
+function toggleLevelSection() {
+  levelSectionOpen = !levelSectionOpen;
+  buildSidebar();
+}
+
+function toggleLevel(lvl) {
+  if (selectedLevels.has(lvl)) selectedLevels.delete(lvl);
+  else selectedLevels.add(lvl);
+  refreshAfterFilterChange();
+}
+
+function toggleAllLevels() {
+  if (selectedLevels.size >= LEVELS.length) {
+    selectedLevels.clear();
+  } else {
+    LEVELS.forEach(l => selectedLevels.add(l));
+  }
+  refreshAfterFilterChange();
 }
 
 function toggleAzSection() {
@@ -686,6 +833,118 @@ function refreshAfterFilterChange() {
   }, 20);
 }
 
+// ── 搜尋 ──────────────────────────────────────────────
+let _searchDebounce = null;
+function onSearchInput() {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => {
+    searchQuery = document.getElementById('searchInput').value.trim();
+    renderContent();
+    layoutLetterGrids();
+  }, 150);
+}
+
+function toggleExact() {
+  searchExact = !searchExact;
+  const lbl = document.getElementById('scope-exact');
+  const chk = document.getElementById('schk-exact');
+  if (lbl) lbl.classList.toggle('active', searchExact);
+  if (chk) chk.style.color = searchExact ? '' : 'transparent';
+  renderContent();
+  layoutLetterGrids();
+}
+
+function toggleScope(which) {
+  // 兩個範圍都可以取消勾選：都未勾選 = 不限範圍 = 同時搜尋詞目與例句
+  searchScope[which] = !searchScope[which];
+  const key = which === 'lemma' ? 'lemma' : 'example';
+  const lbl = document.getElementById('scope-' + key);
+  const chk = document.getElementById('schk-' + key);
+  if (lbl) lbl.classList.toggle('active', searchScope[which]);
+  if (chk) chk.style.color = searchScope[which] ? '' : 'transparent';
+  renderContent();
+  layoutLetterGrids();
+}
+
+function insertChar(lowerChar) {
+  const ch = _charCase === 'upper' ? SPECIAL_CHARS[lowerChar] : lowerChar;
+  const input = document.getElementById('searchInput');
+  const start = input.selectionStart, end = input.selectionEnd;
+  const val = input.value;
+  input.value = val.slice(0, start) + ch + val.slice(end);
+  const pos = start + ch.length;
+  input.setSelectionRange(pos, pos);
+  input.focus();
+  onSearchInput();
+}
+
+function cycleCase() {
+  _charCase = _charCase === 'lower' ? 'upper' : 'lower';
+  const btn = document.getElementById('caseCycleBtn');
+  if (btn) {
+    btn.textContent = _charCase === 'upper' ? 'ABC' : 'abc';
+    btn.classList.toggle('upper', _charCase === 'upper');
+    document.querySelectorAll('.char-btn').forEach(b => {
+      const lower = b.title.split(' ')[0];
+      b.textContent = _charCase === 'upper' ? (SPECIAL_CHARS[lower] || lower) : lower;
+    });
+  }
+}
+
+function clearSearchFilters() {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = '';
+  searchQuery = '';
+  searchExact = false;
+  searchScope = { lemma: true, example: true };
+  const exLbl = document.getElementById('scope-exact'), exChk = document.getElementById('schk-exact');
+  if (exLbl) exLbl.classList.remove('active');
+  if (exChk) exChk.style.color = 'transparent';
+  ['lemma', 'example'].forEach(k => {
+    const lbl = document.getElementById('scope-' + k), chk = document.getElementById('schk-' + k);
+    if (lbl) lbl.classList.add('active');
+    if (chk) chk.style.color = '';
+  });
+  renderContent();
+  layoutLetterGrids();
+}
+
+// 判斷一筆詞目是否符合目前的搜尋條件（詞目掃描詞語+翻譯；例句掃描語句+語句翻譯）
+function matchesSearch(e) {
+  if (!searchQuery) return true;
+  const rawQ = searchQuery;
+  const q = searchQuery.toLowerCase();
+  const noScope = !searchScope.lemma && !searchScope.example;
+  const useLemma = noScope || searchScope.lemma;
+  const useExample = noScope || searchScope.example;
+  const senses = sensesByLemma[lemmaKey(e.id, e.dial)] || [];
+
+  if (useLemma) {
+    if (searchExact) {
+      if (e.word === rawQ) return true;
+      if (senses.some(s => (s['翻譯'] || '') === rawQ)) return true;
+    } else {
+      if (e.word.toLowerCase().includes(q)) return true;
+      if (senses.some(s => (s['翻譯'] || '').toLowerCase().includes(q))) return true;
+    }
+  }
+  if (useExample) {
+    for (const s of senses) {
+      const exs = examplesBySense[s['義項']] || [];
+      for (const ex of exs) {
+        if (searchExact) {
+          if ((ex['語句'] || '') === rawQ) return true;
+          if ((ex['語句翻譯'] || '') === rawQ) return true;
+        } else {
+          if ((ex['語句'] || '').toLowerCase().includes(q)) return true;
+          if ((ex['語句翻譯'] || '').toLowerCase().includes(q)) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 // 依音檔檔名判斷實際存放的資料夾類別（見專案分流規則）
 function resolveAudioCategory(filename, dial) {
   const base = filename.replace(/\.mp3$/i, '');
@@ -714,6 +973,21 @@ function audioUrl(e) {
   return AUDIO_BASE + e.dial + '/' + cat + '/' + e.audioFile;
 }
 
+function renderLemmaCard(e) {
+  const url = audioUrl(e);
+  const hasAudio = !!url;
+  return `<div class="lemma-entry" id="lemma-${e.id}-${e.dial}">
+      <div class="entry-dial-tag" data-dial="${e.dial}">${escapeHtml(dialectName(e.dial))}</div>
+      <div class="word-row">
+        <div class="word-main">${renderWordWithAffix(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
+        <button class="play-btn" ${hasAudio ? '' : 'disabled'}
+          title="${hasAudio ? '播放音檔' : '無音檔'}"
+          onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
+      </div>
+      ${renderSenseSection(e.id, e.dial)}
+    </div>`;
+}
+
 function renderContent() {
   const content = document.getElementById('content');
   const visible = getVisibleEntries();
@@ -724,6 +998,28 @@ function renderContent() {
   }
   if (visible.length === 0) {
     content.innerHTML = `<div class="empty"><div class="empty-icon">—</div><div>所選方言目前尚無資料</div></div>`;
+    return;
+  }
+
+  // 搜尋模式：不受目前分頁字母限制，跨字母顯示所有符合的結果
+  if (searchQuery) {
+    const results = visible.filter(matchesSearch);
+    if (!results.length) {
+      content.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div>找不到符合「${escapeHtml(searchQuery)}」的結果</div></div>`;
+      return;
+    }
+    let html = `<div class="content-info">搜尋「<span>${escapeHtml(searchQuery)}</span>」找到 <span>${results.length.toLocaleString()}</span> 筆</div>`;
+    let lastLetter = null;
+    results.forEach(e => {
+      if (e.letter !== lastLetter) {
+        if (lastLetter !== null) html += '</div>';
+        html += `<div class="letter-hdr">${e.letter.toUpperCase()}</div><div class="letter-group">`;
+        lastLetter = e.letter;
+      }
+      html += renderLemmaCard(e);
+    });
+    html += '</div>';
+    content.innerHTML = html;
     return;
   }
 
@@ -738,20 +1034,7 @@ function renderContent() {
   let html = `<div class="content-info"><span>${visible.length.toLocaleString()}</span> 筆詞條 · 目前顯示「<span>${activeLetter.toUpperCase()}</span>」共 ${pageEntries.length.toLocaleString()} 筆</div>`;
   html += `<div class="letter-hdr">${activeLetter.toUpperCase()}</div>`;
   html += `<div class="letter-group">`;
-  pageEntries.forEach((e) => {
-    const url = audioUrl(e);
-    const hasAudio = !!url;
-    html += `<div class="lemma-entry" id="lemma-${e.id}-${e.dial}">
-      <div class="entry-dial-tag" data-dial="${e.dial}">${escapeHtml(dialectName(e.dial))}</div>
-      <div class="word-row">
-        <div class="word-main">${renderWordWithAffix(e.word)}${e.ne ? '<span class="ne-tag">ne</span>' : ''}</div>
-        <button class="play-btn" ${hasAudio ? '' : 'disabled'}
-          title="${hasAudio ? '播放音檔' : '無音檔'}"
-          onclick="togglePlay('${url.replace(/'/g, "\\'")}', this)">${hasAudio ? '▶' : '—'}</button>
-      </div>
-      ${renderSenseSection(e.id, e.dial)}
-    </div>`;
-  });
+  pageEntries.forEach(e => { html += renderLemmaCard(e); });
   html += `</div>`;
   content.innerHTML = html;
 }
@@ -759,6 +1042,11 @@ function renderContent() {
 // 切換分頁字母：只渲染該字母的詞條，大幅減少單次渲染量
 function switchLetter(letter, afterRender) {
   activeLetter = letter;
+  if (searchQuery) {
+    searchQuery = '';
+    const input = document.getElementById('searchInput');
+    if (input) input.value = '';
+  }
   buildSidebar();
   const content = document.getElementById('content');
   if (content) {
@@ -774,8 +1062,12 @@ function switchLetter(letter, afterRender) {
 
 // ── Senses + Etymology rendering ──
 function renderSenseSection(lemmaId, dial) {
-  const senses = sensesByLemma[lemmaKey(lemmaId, dial)];
+  let senses = sensesByLemma[lemmaKey(lemmaId, dial)];
   if (!senses || !senses.length) return '';
+  if (selectedLevels.size < LEVELS.length) {
+    senses = senses.filter(s => selectedLevels.has((s['等級'] || '').trim()));
+    if (!senses.length) return '';
+  }
 
   const multi = senses.length > 1;
   const senseEtyRaw = senses.map(s => (s['語源'] || '').trim());
@@ -869,17 +1161,20 @@ function highlightTerm(text, term) {
 
 // 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
 // 支援 | 分隔多筆資料，每筆各自佔一行（同一行內仍可用 + 連結多個來源）
+// 近義詞/反義詞/相關詞：跟語源的「純數字」解析方式相同（連結詞目＋顯示翻譯），前面加標籤
+// | 分隔多筆資料，改以「；」連接、同一行延伸下去（同一筆內仍可用 + 連結多個來源）
 function renderNumericRefLine(label, raw, dial) {
   raw = (raw || '').trim();
   if (!raw) return '';
   const groups = raw.split('|').map(g => g.trim()).filter(Boolean);
-  return groups.map(group => {
+  const rendered = groups.map(group => {
     const resolved = group.split('+').map(t => t.trim()).filter(Boolean)
       .map(t => resolveEtymologyToken(t, dial)).filter(r => r && r.type === 'numeric');
-    if (!resolved.length) return '';
-    const inner = resolved.map(renderEtymologyFragment).join(' + ');
-    return `<div class="ref-row"><span class="ref-label">${label}</span>${inner}</div>`;
-  }).join('');
+    if (!resolved.length) return null;
+    return resolved.map(renderEtymologyFragment).join(' + ');
+  }).filter(r => r !== null);
+  if (!rendered.length) return '';
+  return `<div class="ref-row"><span class="ref-label">${label}</span>${rendered.join('；')}</div>`;
 }
 
 // 附註：純文字，不解析
@@ -893,22 +1188,32 @@ function renderNoteLine(raw) {
 // + 代表同一句內組合多個來源（構詞分析，共用一個「源於」前綴）。
 // | 代表完全獨立的多筆語源說法，各自成句（各自判斷是否要有「源於」），
 // 句子之間用「，」連接，最後只有一個句號。
-function resolveEtymologyGroup(rawGroup, dial) {
+function resolveEtymologyGroupInner(rawGroup, dial) {
   const tokens = rawGroup.split('+').map(t => t.trim()).filter(Boolean);
   const resolved = tokens.map(t => resolveEtymologyToken(t, dial)).filter(Boolean);
   if (!resolved.length) return null;
-
-  const isPureNumeric = resolved.every(r => r.type === 'numeric');
-  const inner = resolved.map(renderEtymologyFragment).join(' + ');
-  const prefix = isPureNumeric ? '' : '源於';
-  return prefix + inner;
+  return {
+    inner: resolved.map(renderEtymologyFragment).join(' + '),
+    isPureNumeric: resolved.every(r => r.type === 'numeric')
+  };
 }
 
+// | 代表多筆完全獨立的語源說法。第一筆維持原本前綴邏輯（源於／構詞省略），
+// 之後每一筆改用「，＜」連接（不再重複「源於」）。
 function resolveEtymologyField(raw, dial) {
   const groups = raw.split('|').map(g => g.trim()).filter(Boolean);
-  const rendered = groups.map(g => resolveEtymologyGroup(g, dial)).filter(g => g !== null);
-  if (!rendered.length) return null;
-  return { html: rendered.join('，') + '。' };
+  const parts = [];
+  groups.forEach(g => {
+    const res = resolveEtymologyGroupInner(g, dial);
+    if (!res) return;
+    if (parts.length === 0) {
+      parts.push((res.isPureNumeric ? '' : '源於') + res.inner);
+    } else {
+      parts.push('，＜' + res.inner);
+    }
+  });
+  if (!parts.length) return null;
+  return { html: parts.join('') + '。' };
 }
 
 function resolveEtymologyToken(token, dial) {
@@ -1008,7 +1313,7 @@ function scrollContentTo(el, extraOffset) {
 function jumpToLemma(id, dial) {
   const target = lemmataById[lemmaKey(id, dial)];
   if (!target) return;
-  if (target.letter !== activeLetter) {
+  if (target.letter !== activeLetter || searchQuery) {
     switchLetter(target.letter, () => {
       scrollContentTo(document.getElementById('lemma-' + id + '-' + dial));
     });

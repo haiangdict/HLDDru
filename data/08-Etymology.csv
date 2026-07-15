@@ -58,6 +58,7 @@ PAN30820,原始南島語,*garuC,,,梳子,https://acd.clld.org/cognatesets/30820
 PAN30447,原始南島語,*gemgem,,,拳頭；握拳,https://acd.clld.org/cognatesets/30447
 PAN33892,原始南島語,*guCguC,,,抓癢,https://acd.clld.org/cognatesets/33892
 PAN26533,原始南島語,*isa,,,一,https://acd.clld.org/cognatesets/26533
+PAN26542,原始南島語,*iSiq,,,尿液；排尿,https://acd.clld.org/cognatesets/26542
 PAN31635,原始南島語,*kaija,,,何時(過去),https://acd.clld.org/cognatesets/31635
 PAN31601,原始南島語,*kaka,,,兄姊,https://acd.clld.org/cognatesets/31601
 PAN30494,原始南島語,*kaRaC,,,咬,https://acd.clld.org/cognatesets/30494
@@ -100,6 +101,7 @@ PAN30995,原始南島語,*paNid,,,翅膀,https://acd.clld.org/cognatesets/30995
 PAN27380,原始南島語,*paŋudaN,,,露兜樹,https://acd.clld.org/cognatesets/27380
 PAN32879,原始南島語,*paqeju,,,膽囊,https://acd.clld.org/cognatesets/32879
 PAN30605,原始南島語,*pijax,,,多少,https://acd.clld.org/cognatesets/30605
+PAN30630,原始南島語,*piliq,,,挑選,https://acd.clld.org/cognatesets/30630
 PAN30723,原始南島語,*pitu,,,七,https://acd.clld.org/cognatesets/30723
 PAN29948,原始南島語,*pujek,,,肚臍；臍帶,https://acd.clld.org/cognatesets/29948
 PAN30154,原始南島語,*puluq,,,十,https://acd.clld.org/cognatesets/30154
@@ -126,6 +128,7 @@ PAN27839,原始南島語,*quay,,,藤,https://acd.clld.org/cognatesets/27839
 PAN27850,原始南島語,*qudip,,,生命；活著,https://acd.clld.org/cognatesets/27850
 PAN27867,原始南島語,*quluh,,,頭部,https://acd.clld.org/cognatesets/27867
 PAN27868,原始南島語,*qumah,,,火耕田,https://acd.clld.org/cognatesets/27868
+PAN27902,原始南島語,*quSuŋ,,,可食用菇類,https://acd.clld.org/cognatesets/27902
 PAN27912,原始南島語,*quzaN,,,雨水,https://acd.clld.org/cognatesets/27912
 PAN28014,原始南島語,*Riaq,,,白茅,https://acd.clld.org/cognatesets/28014
 PAN29922,原始南島語,*Rubu,,,巢穴,https://acd.clld.org/cognatesets/29922
@@ -193,6 +196,7 @@ JPN111,日語,汽車,きしゃ,kisha,,
 JPN112,日語,校長,こうちょう,kōchō,,
 JPN113,日語,校長先生,こうちょうせんせい,kōchō sensei,,
 JPN116,日語,コップ,,koppu,,
+JPN119,日語,校医さん,こういさん,kōi-san,,
 JPN121,日語,靴,くつ,kutsu,,
 JPN126,日語,教会,きょうかい,kyōkai,,
 JPN131,日語,胡瓜,キュウリ,kyūri,,
@@ -235,6 +239,7 @@ JPN266,日語,梅,ウメ,ume,,
 JPN271,日語,兎,ウサギ,usagi,,
 JPN276,日語,柳,ヤナギ,yanagi,,
 JPN281,日語,象,ゾウ,zō,,
+JPN286,日語,図画,ずが,zuga,,
 ENG001,英語,bus,,,,
 FRA001,法語,savon,,,肥皂,
 HAK001,客語,𠊎,ngaiˇ,,我,
@@ -246,14 +251,23 @@ NAN009,閩語,韭菜,kú-tshài,kú-chhài,,
 NAN011,閩語,鎖匙,só-sî,só-sî,,
 NAN016,閩語,豆油,tāu-iû,tāu-iû,,
 NAN021,閩語,豆菜,tāu-tshài,tāu-chhài,,
+NAN024,閩語,頭家,thâu-ke,thâu-ke,,
 NAN026,閩語,菜頭,tshài-thâu,chhài-thâu,,
 NAN031,閩語,大麵,tuā-mī,tōa-mī,,
 NLD001,荷蘭語,kop,,,杯子,
 POR001,葡萄牙語,pão,,,麵包,
-PWN011,排灣語,alju,,,糖；蜂蜜,
-PWN001,排灣語,culjuk,,,條型米糕,
-PWN006,排灣語,djamay,,,菜餚,
+PWN001,排灣語,alju,,,糖；蜂蜜,
+PWN004,排灣語,bibi,,,鴨子,
+PWN006,排灣語,caqi,,,,
+PWN011,排灣語,culjuk,,,條型米糕,
+PWN016,排灣語,djamay,,,菜餚,
+PWN019,排灣語,maculju,,,炎熱,
+PWN021,排灣語,puluk,,,,
+PWN026,排灣語,qarizang,,,長豆,
+PYU001,卑南語,ganggang,,,犁；犁田,
+PYU006,卑南語,maymay,,,鴨子,
 SPA001,西班牙語,peso,,,披索(貨幣名),
+SXR001,拉阿魯哇語,mairangʉ,,,地瓜，番薯,
 ZHO001,華語,冰箱,,,,
 ZHO006,華語,校長,,,,
 ZHO011,華語,修女,,,,

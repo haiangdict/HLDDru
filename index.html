@@ -206,6 +206,7 @@ input[type="text"]::placeholder { color: var(--muted); }
 .sb-sec-hdr:hover { color: #e0c060; }
 .sb-sec-hdr .sb-arrow { margin-left: auto; font-size: 0.55rem; opacity: 0.6; }
 .sb-sec-body.closed { display: none; }
+.sb-sec-body-scroll { max-height: 280px; overflow-y: auto; }
 .sb-all-row, .sb-l2-item {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 13px;
@@ -342,6 +343,7 @@ input[type="text"]::placeholder { color: var(--muted); }
   font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--muted);
 }
 .term-highlight { color: var(--accent); font-weight: 600; margin: 0 0.15em; }
+.term-highlight:first-child { margin-left: 0; }
 
 /* ── ETYMOLOGY BLOCK ── */
 .ety-block {
@@ -508,6 +510,10 @@ const LEVELS = ['B', 'I', 'S', 'U'];
 let selectedLevels = new Set(LEVELS); // 預設全部勾選
 let levelSectionOpen = true;          // 預設全部展開
 
+let ALL_CATEGORIES = [];              // 載入資料後填入（見 loadData），保留原始文字，不合併
+let selectedCategories = new Set();   // 載入資料後會預設全部勾選
+let categorySectionOpen = false;      // 選項很多，預設收合
+
 // ── 搜尋 ──
 let searchQuery = '';
 let searchExact = false;
@@ -628,6 +634,7 @@ async function loadData() {
     // ── Senses ── 同樣用「編號_方言別」組合鍵，避免跨方言資料混在一起
     sensesByLemma = {};
     sensesBySenseId = {};
+    const categorySet = new Set();
     if (sensesText) {
       const sn = parseCSV(sensesText);
       const senseObjs = rowsToObjects(sn.headers, sn.rows);
@@ -637,8 +644,12 @@ async function loadData() {
         if (!id) return;
         (sensesByLemma[lemmaKey(id, dial)] = sensesByLemma[lemmaKey(id, dial)] || []).push(s);
         if (s['義項']) sensesBySenseId[s['義項']] = s;
+        const cat = (s['分類'] || '').trim();
+        if (cat) categorySet.add(cat);
       });
     }
+    ALL_CATEGORIES = [...categorySet].sort();
+    selectedCategories = new Set(ALL_CATEGORIES); // 預設全部勾選
 
     // ── Etymology ──
     etymologyByCode = {};
@@ -688,6 +699,21 @@ function layoutLetterGrids() {
     group.style.gridAutoFlow = 'row';
     group.style.gridTemplateColumns = colStyle;
   });
+  fixTermHighlightLineStarts();
+}
+
+// 例句/翻譯裡的關鍵字highlight，前後都有間距；但如果剛好換行落在一行最前方
+// （不管是句首、還是文字換行造成的），要取消跟左邊的間距，讓文字對齊其他行。
+// 這是動態版面事實（跟目前容器寬度、字體大小有關），CSS本身無法判斷，
+// 所以在版面穩定後，用幾何位置比對「是不是這一行最左邊的元素」。
+function fixTermHighlightLineStarts() {
+  document.querySelectorAll('.example-sentence, .example-trans').forEach(container => {
+    const containerLeft = container.getBoundingClientRect().left;
+    container.querySelectorAll('.term-highlight').forEach(span => {
+      const spanLeft = span.getBoundingClientRect().left;
+      span.style.marginLeft = (Math.abs(spanLeft - containerLeft) < 1) ? '0' : '';
+    });
+  });
 }
 
 let _resizeTimer = null;
@@ -703,11 +729,21 @@ function entryPassesLevelFilter(e) {
   return senses.some(s => selectedLevels.has((s['等級'] || '').trim()));
 }
 
+function entryPassesCategoryFilter(e) {
+  if (selectedCategories.size >= ALL_CATEGORIES.length) return true; // 全選 = 不篩選
+  const senses = sensesByLemma[lemmaKey(e.id, e.dial)];
+  if (!senses || !senses.length) return false;
+  return senses.some(s => selectedCategories.has((s['分類'] || '').trim()));
+}
+
 function getVisibleEntries() {
   if (selectedDialects.size === 0) return [];
   let result = entries.filter(e => selectedDialects.has(e.dial));
   if (selectedLevels.size < LEVELS.length) {
     result = result.filter(entryPassesLevelFilter);
+  }
+  if (selectedCategories.size < ALL_CATEGORIES.length) {
+    result = result.filter(entryPassesCategoryFilter);
   }
   return result;
 }
@@ -771,6 +807,26 @@ function buildSidebar() {
   });
   html += `</div>`;
 
+  html += `<div class="sb-divider"></div>`;
+  const allCatSel = ALL_CATEGORIES.length > 0 && selectedCategories.size >= ALL_CATEGORIES.length;
+  html += `<div class="sb-sec-hdr" onclick="toggleCategorySection()">
+    範疇
+    <span class="sb-arrow">${categorySectionOpen ? '▾' : '▸'}</span>
+  </div>
+  <div class="sb-sec-body ${categorySectionOpen ? '' : 'closed'} sb-sec-body-scroll">
+    <div class="sb-all-row ${allCatSel ? 'sel' : ''}" onclick="toggleAllCategories()">
+      <div class="sb-chk ${allCatSel ? 'sel' : ''}">${allCatSel ? '✓' : ''}</div>
+      <span>全部</span>
+    </div>`;
+  ALL_CATEGORIES.forEach(cat => {
+    const sel = selectedCategories.has(cat);
+    html += `<div class="sb-l2-item ${sel ? 'sel' : ''}" onclick="toggleCategory('${cat.replace(/'/g, "\\'")}')">
+      <div class="sb-chk ${sel ? 'sel' : ''}">${sel ? '✓' : ''}</div>
+      <span>${escapeHtml(cat)}</span>
+    </div>`;
+  });
+  html += `</div>`;
+
   sidebar.innerHTML = html;
 }
 
@@ -790,6 +846,26 @@ function toggleAllLevels() {
     selectedLevels.clear();
   } else {
     LEVELS.forEach(l => selectedLevels.add(l));
+  }
+  refreshAfterFilterChange();
+}
+
+function toggleCategorySection() {
+  categorySectionOpen = !categorySectionOpen;
+  buildSidebar();
+}
+
+function toggleCategory(cat) {
+  if (selectedCategories.has(cat)) selectedCategories.delete(cat);
+  else selectedCategories.add(cat);
+  refreshAfterFilterChange();
+}
+
+function toggleAllCategories() {
+  if (selectedCategories.size >= ALL_CATEGORIES.length) {
+    selectedCategories.clear();
+  } else {
+    ALL_CATEGORIES.forEach(c => selectedCategories.add(c));
   }
   refreshAfterFilterChange();
 }
@@ -1069,6 +1145,10 @@ function renderSenseSection(lemmaId, dial) {
   if (!senses || !senses.length) return '';
   if (selectedLevels.size < LEVELS.length) {
     senses = senses.filter(s => selectedLevels.has((s['等級'] || '').trim()));
+    if (!senses.length) return '';
+  }
+  if (selectedCategories.size < ALL_CATEGORIES.length) {
+    senses = senses.filter(s => selectedCategories.has((s['分類'] || '').trim()));
     if (!senses.length) return '';
   }
 

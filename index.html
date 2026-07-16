@@ -206,7 +206,6 @@ input[type="text"]::placeholder { color: var(--muted); }
 .sb-sec-hdr:hover { color: #e0c060; }
 .sb-sec-hdr .sb-arrow { margin-left: auto; font-size: 0.55rem; opacity: 0.6; }
 .sb-sec-body.closed { display: none; }
-.sb-sec-body-scroll { max-height: 280px; overflow-y: auto; }
 .sb-all-row, .sb-l2-item {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 13px;
@@ -813,7 +812,7 @@ function buildSidebar() {
     範疇
     <span class="sb-arrow">${categorySectionOpen ? '▾' : '▸'}</span>
   </div>
-  <div class="sb-sec-body ${categorySectionOpen ? '' : 'closed'} sb-sec-body-scroll">
+  <div class="sb-sec-body ${categorySectionOpen ? '' : 'closed'}">
     <div class="sb-all-row ${allCatSel ? 'sel' : ''}" onclick="toggleAllCategories()">
       <div class="sb-chk ${allCatSel ? 'sel' : ''}">${allCatSel ? '✓' : ''}</div>
       <span>全部</span>

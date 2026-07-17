@@ -660,15 +660,18 @@ async function loadData() {
       });
     }
 
-    // ── Examples ──
+    // ── Examples ── 用「詞目編號_義項編號」組合鍵，因為義項編號本身並非全域唯一
+    // （不同詞目可能剛好意思相同、被分配到同樣的義項編號）
     examplesBySense = {};
     if (examplesText) {
       const ex = parseCSV(examplesText);
       const exObjs = rowsToObjects(ex.headers, ex.rows);
       exObjs.forEach(row => {
         const senseId = row['義項'];
-        if (!senseId) return;
-        (examplesBySense[senseId] = examplesBySense[senseId] || []).push(row);
+        const lemId = row['編號'];
+        if (!senseId || !lemId) return;
+        const key = lemId + '_' + senseId;
+        (examplesBySense[key] = examplesBySense[key] || []).push(row);
       });
     }
 
@@ -1031,7 +1034,7 @@ function matchesSearch(e) {
   }
   if (useExample) {
     for (const s of senses) {
-      const exs = examplesBySense[s['義項']] || [];
+      const exs = examplesBySense[s['編號'] + '_' + s['義項']] || [];
       for (const ex of exs) {
         if (searchExact) {
           if ((ex['語句'] || '') === rawQ) return true;
@@ -1196,7 +1199,7 @@ function renderSenseSection(lemmaId, dial) {
     if (!shared && senseEtyResolved[idx]) {
       html += `<div class="ety-block">${senseEtyResolved[idx].html}</div>`;
     }
-    const exList = examplesBySense[s['義項']];
+    const exList = examplesBySense[s['編號'] + '_' + s['義項']];
     if (exList && exList.length) {
       html += exList.map(renderExampleBlock).join('');
     }

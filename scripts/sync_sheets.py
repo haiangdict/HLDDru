@@ -18,6 +18,7 @@ import csv
 import json
 import os
 import sys
+import time
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -25,6 +26,9 @@ from google.oauth2.service_account import Credentials
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets.readonly',
 ]
+
+MAX_RETRIES = 4
+RETRY_BASE_DELAY = 5  # 秒；每次重試延遲加倍（5, 10, 20...）
 
 # ── 資料來源設定 ──────────────────────────────────────────────
 # id_env    : 存放該 Sheet ID 的 GitHub Secret 名稱
@@ -65,9 +69,23 @@ def get_client():
 
 
 def fetch_sheet_values(gc, spreadsheet_id, sheet_name):
-    sh = gc.open_by_key(spreadsheet_id)
-    ws = sh.worksheet(sheet_name)
-    return ws.get_all_values()  # 保留儲存格顯示文字（含前導零），不轉型成數字
+    last_err = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            sh = gc.open_by_key(spreadsheet_id)
+            ws = sh.worksheet(sheet_name)
+            return ws.get_all_values()  # 保留儲存格顯示文字（含前導零），不轉型成數字
+        except gspread.exceptions.APIError as e:
+            last_err = e
+            status = getattr(getattr(e, 'response', None), 'status_code', None)
+            # 只針對暫時性錯誤（5xx／429限流）重試，其他錯誤（如權限、找不到分頁）直接失敗
+            if status is not None and status not in (429, 500, 502, 503, 504):
+                raise
+            if attempt < MAX_RETRIES:
+                delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                print(f'  ⚠ 第{attempt}次抓取失敗（{e}），{delay}秒後重試...')
+                time.sleep(delay)
+    raise last_err
 
 
 def write_csv(values, output_path):
@@ -94,6 +112,7 @@ def write_csv(values, output_path):
 
 def main():
     gc = get_client()
+    failures = []
 
     for sheet_cfg in SHEETS:
         spreadsheet_id = os.environ.get(sheet_cfg['id_env'])
@@ -102,8 +121,21 @@ def main():
             continue
 
         print(f"同步 {sheet_cfg['output']} ← Sheet({sheet_cfg['id_env']})...")
-        values = fetch_sheet_values(gc, spreadsheet_id, sheet_cfg['sheet_name'])
-        write_csv(values, sheet_cfg['output'])
+        try:
+            values = fetch_sheet_values(gc, spreadsheet_id, sheet_cfg['sheet_name'])
+            write_csv(values, sheet_cfg['output'])
+        except Exception as e:
+            print(f"  ✗ {sheet_cfg['output']} 同步失敗：{e}", file=sys.stderr)
+            failures.append(sheet_cfg['output'])
+
+    if failures:
+        print(
+            f"\n⚠ 有 {len(failures)} 份資料本次同步失敗，維持上次成功同步的版本："
+            + '、'.join(failures),
+            file=sys.stderr,
+        )
+        print('其餘成功的部分仍會照常寫入，下次排程會自動重試失敗的部分。', file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -701,16 +701,40 @@ function layoutLetterGrids() {
   fixTermHighlightLineStarts();
 }
 
-// 例句/翻譯裡的關鍵字highlight，前後都有間距；但如果剛好換行落在一行最前方
+// 例句/翻譯裡的關鍵字highlight，前後都有間距；但如果剛好落在一行最前方
 // （不管是句首、還是文字換行造成的），要取消跟左邊的間距，讓文字對齊其他行。
-// 這是動態版面事實（跟目前容器寬度、字體大小有關），CSS本身無法判斷，
-// 所以在版面穩定後，用幾何位置比對「是不是這一行最左邊的元素」。
+// 判斷方式：直接檢查這個標記「前面緊鄰的文字」是否跟它同一行——
+// 用 Range API 量出前一個字元的實際位置，比對兩者的垂直位置(top)是否相同。
+// 不能用「跟容器左邊界比對」，因為容器本身的版面結構不一定跟文字實際起始點對齊，
+// 這也是先前造成「不到」這種非行首詞彙被誤判成行首的原因。
 function fixTermHighlightLineStarts() {
   document.querySelectorAll('.example-sentence, .example-trans').forEach(container => {
-    const containerLeft = container.getBoundingClientRect().left;
     container.querySelectorAll('.term-highlight').forEach(span => {
-      const spanLeft = span.getBoundingClientRect().left;
-      span.style.marginLeft = (Math.abs(spanLeft - containerLeft) < 1) ? '0' : '';
+      let isLineStart = true;
+      const prev = span.previousSibling;
+      try {
+        if (prev && prev.nodeType === Node.TEXT_NODE) {
+          const text = prev.textContent;
+          const len = text.replace(/\s+$/, '').length; // 忽略前一個節點尾端的空白
+          if (len > 0) {
+            const range = document.createRange();
+            range.setStart(prev, len - 1);
+            range.setEnd(prev, len);
+            const prevRect = range.getBoundingClientRect();
+            const spanRect = span.getBoundingClientRect();
+            if (prevRect.width > 0 && Math.abs(prevRect.top - spanRect.top) < 2) {
+              isLineStart = false; // 前面還有文字在同一行
+            }
+          }
+        } else if (prev && prev.getBoundingClientRect) {
+          const prevRect = prev.getBoundingClientRect();
+          const spanRect = span.getBoundingClientRect();
+          if (Math.abs(prevRect.top - spanRect.top) < 2) {
+            isLineStart = false;
+          }
+        }
+      } catch (e) { /* Range 若失敗就保守當作非行首，維持原本間距 */ isLineStart = false; }
+      span.style.marginLeft = isLineStart ? '0' : '';
     });
   });
 }

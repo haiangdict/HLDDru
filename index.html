@@ -709,7 +709,13 @@ function layoutLetterGrids() {
 // 用 Range API 量出前一個字元的實際位置，比對兩者的垂直位置(top)是否相同。
 // 不能用「跟容器左邊界比對」，因為容器本身的版面結構不一定跟文字實際起始點對齊，
 // 這也是先前造成「不到」這種非行首詞彙被誤判成行首的原因。
+//
+// 效能重點：先把「所有標記」都讀取完位置、判斷好結果，全部讀完之後才「統一寫入」樣式。
+// 一頁詞條量大時，例句關鍵字標記可能有數千個，如果每個標記都是「讀取→馬上寫入」交錯進行，
+// 每次寫入都會讓瀏覽器下一次讀取被迫重新計算整份版面（layout thrashing），
+// 這是初次載入卡頓的主要原因；讀寫分成兩階段後，讀取階段可以共用同一份版面結果。
 function fixTermHighlightLineStarts() {
+  const updates = [];
   document.querySelectorAll('.example-sentence, .example-trans').forEach(container => {
     container.querySelectorAll('.term-highlight').forEach(span => {
       let isLineStart = true;
@@ -736,8 +742,12 @@ function fixTermHighlightLineStarts() {
           }
         }
       } catch (e) { /* Range 若失敗就保守當作非行首，維持原本間距 */ isLineStart = false; }
-      span.style.marginLeft = isLineStart ? '0' : '';
+      updates.push({ span, isLineStart });
     });
+  });
+  // 全部讀取完成後才統一寫入，避免讀寫交錯
+  updates.forEach(({ span, isLineStart }) => {
+    span.style.marginLeft = isLineStart ? '0' : '';
   });
 }
 

@@ -941,6 +941,10 @@ function refreshAfterFilterChange() {
 let _searchDebounce = null;
 function onSearchInput() {
   clearTimeout(_searchDebounce);
+  const content = document.getElementById('content');
+  if (content) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">⟳</div><div>搜尋中…</div></div>`;
+  }
   _searchDebounce = setTimeout(() => {
     searchQuery = document.getElementById('searchInput').value.trim();
     renderContent();
@@ -1107,12 +1111,18 @@ function renderContent() {
 
   // 搜尋模式：不受目前分頁字母限制，跨字母顯示所有符合的結果
   if (searchQuery) {
-    const results = visible.filter(matchesSearch);
-    if (!results.length) {
+    const allResults = visible.filter(matchesSearch);
+    if (!allResults.length) {
       content.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div>找不到符合「${escapeHtml(searchQuery)}」的結果</div></div>`;
       return;
     }
-    let html = `<div class="content-info">搜尋「<span>${escapeHtml(searchQuery)}</span>」找到 <span>${results.length.toLocaleString()}</span> 筆</div>`;
+    const SEARCH_RESULT_CAP = 200;
+    const truncated = allResults.length > SEARCH_RESULT_CAP;
+    const results = truncated ? allResults.slice(0, SEARCH_RESULT_CAP) : allResults;
+
+    let html = `<div class="content-info">搜尋「<span>${escapeHtml(searchQuery)}</span>」找到 <span>${allResults.length.toLocaleString()}</span> 筆`
+      + (truncated ? `，僅顯示前 <span>${SEARCH_RESULT_CAP}</span> 筆（結果過多，請輸入更精確的關鍵字以縮小範圍）` : '')
+      + `</div>`;
     let lastLetter = null;
     results.forEach(e => {
       if (e.letter !== lastLetter) {

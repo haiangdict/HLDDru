@@ -485,7 +485,6 @@ const EXAMPLES_URL = './data/08-Examples.csv';
 let entries = [];          // Lemmata rows
 let lemmataById = {};       // "編號_語別" -> entry
 let sensesByLemma = {};     // "編號_語別" -> [sense objects]
-let sensesBySenseId = {};   // 義項 id -> sense object (globally unique)
 let etymologyByCode = {};   // code -> etymology object
 let examplesBySense = {};   // 義項 id -> [example objects]
 
@@ -631,7 +630,6 @@ async function loadData() {
 
     // ── Senses ── 同樣用「編號_方言別」組合鍵，避免跨方言資料混在一起
     sensesByLemma = {};
-    sensesBySenseId = {};
     const categorySet = new Set();
     if (sensesText) {
       const sn = parseCSV(sensesText);
@@ -641,7 +639,6 @@ async function loadData() {
         const dial = s['語別'];
         if (!id) return;
         (sensesByLemma[lemmaKey(id, dial)] = sensesByLemma[lemmaKey(id, dial)] || []).push(s);
-        if (s['義項']) sensesBySenseId[s['義項']] = s;
         const cat = (s['分類'] || '').trim();
         if (cat) categorySet.add(cat);
       });
@@ -1355,8 +1352,12 @@ function resolveEtymologyToken(token, dial) {
 
     let trans = '';
     if (senseId) {
-      const targetSense = sensesBySenseId[senseId];
-      if (!targetSense || targetSense['編號'] !== lemmaId) return null; // 查無對應義項，略過此筆
+      // 直接在該詞目自己的義項清單裡找，不用全域對照表——
+      // 因為義項編號本身並非全域唯一（不同詞形可能剛好意思相同、編號重複），
+      // 全域查找會有被別的詞目覆蓋、導致本來查得到的反而查不到的風險。
+      const targetSense = (sensesByLemma[lemmaKey(lemmaId, dial)] || [])
+        .find(s => s['義項'] === senseId);
+      if (!targetSense) return null; // 查無對應義項，略過此筆
       trans = (targetSense['翻譯'] || '').trim();
     } else {
       trans = (sensesByLemma[lemmaKey(lemmaId, dial)] || [])

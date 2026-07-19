@@ -479,7 +479,7 @@ input[type="text"]::placeholder { color: var(--muted); }
 const AUDIO_BASE = 'https://pub-44bec38ae2824f519a8519301efe3bd7.r2.dev/';
 const LEMMATA_URL = './data/08-Lemmata.csv';
 const SENSES_URL = './data/08-Senses.csv';
-const ETYMOLOGY_URL = './data/08-Etymology.csv';
+const ETYMOLOGY_URL = './data/HLD-Etymology.csv';
 const EXAMPLES_URL = './data/08-Examples.csv';
 
 let entries = [];          // Lemmata rows
@@ -1365,7 +1365,7 @@ function resolveEtymologyToken(token, dial) {
     return { type: 'numeric', id: lemmaId, dial, word: targetLemma.word, trans };
   }
 
-  // 拉丁字母+數字：指向 08-Etymology.csv（跟方言別無關，全詞典共用）
+  // 拉丁字母+數字：指向 HLD-Etymology.csv（跨語言辭典共用，跟方言別無關）
   if (/^[A-Za-z]{3}\d+$/.test(token)) {
     const row = etymologyByCode[token];
     if (!row) return null; // 查無對應資料，略過此筆

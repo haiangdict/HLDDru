@@ -47,8 +47,8 @@ SHEETS = [
     },
     {
         'id_env': 'SPREADSHEET_ID_ETYMOLOGY',
-        'sheet_name': '08-Etymology',
-        'output': 'data/08-Etymology.csv',
+        'sheet_name': 'HLD-Etymology',
+        'output': 'data/HLD-Etymology.csv',
     },
     {
         'id_env': 'SPREADSHEET_ID_EXAMPLES',

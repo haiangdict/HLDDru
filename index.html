@@ -964,6 +964,13 @@ function refreshAfterFilterChange() {
 
 // ── 搜尋 ──────────────────────────────────────────────
 let _searchDebounce = null;
+
+// 撇音符號家族（' ʹ ` ‘）統一正規化為 ’（U+2019），跟資料庫一致後再比對，
+// 這樣使用者用鍵盤打一般的直引號 ' 也能搜尋到用 ’ 撰寫的詞條（沿用 indigenous-sos 的做法）。
+function normalizeApostrophe(s) {
+  return (s || '').replace(/[\u0027\u02B9\u0060\u2018]/g, '\u2019');
+}
+
 function onSearchInput() {
   clearTimeout(_searchDebounce);
   const content = document.getElementById('content');
@@ -971,7 +978,7 @@ function onSearchInput() {
     content.innerHTML = `<div class="empty"><div class="empty-icon">⟳</div><div>搜尋中…</div></div>`;
   }
   _searchDebounce = setTimeout(() => {
-    searchQuery = document.getElementById('searchInput').value.trim();
+    searchQuery = normalizeApostrophe(document.getElementById('searchInput').value.trim());
     renderContent();
     layoutLetterGrids();
   }, 150);
